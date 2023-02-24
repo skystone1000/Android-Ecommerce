@@ -1,0 +1,35 @@
+<resources>
+    <string name="shr_app_name">Shrine</string>
+    <string name="shr_hint_username">Username</string>
+    <string name="shr_hint_password">Password</string>
+    <string name="shr_button_login">Login</string>
+    <string name="shr_button_register">Register</string>
+    <string name="shr_error_password">Password must contain at least 8 characters.</string>
+    <string name="shr_filter_title">Filter</string>
+    <string name="shr_search_title">Search</string>
+    <string name="shr_product_title">Title</string>
+    <string name="shr_product_description">Secondary text</string>
+
+    <!-- Shrine backdrop menu labels -->
+    <string name="shr_featured_label">Featured</string>
+    <string name="shr_apartment_label">Apartment</string>
+    <string name="shr_accessories_label">Accessories</string>
+    <string name="shr_shoes_label">Shoes</string>
+    <string name="shr_tops_label">Tops</string>
+    <string name="shr_bottoms_label">Bottoms</string>
+    <string name="shr_dresses_label">Dresses</string>
+    <string name="shr_account_label">My Account</string>
+    <string name="shr_logo_content_description">Shrine Logo</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="label_confirm_password">Confirm Password</string>
+    <string name="label_password">Password</string>
+    <string name="label_organisation">Organisation</string>
+    <string name="label_phone">Phone Number</string>
+    <string name="label_email">Email</string>
+    <string name="label_name">Name</string>
+    <string name="app_name">SHRINE</string>
+    <string name="label_save">Register</string>
+    <string name="shr_button_checkout">Checkout</string>
+    <string name="error_string">Field must not be empty.</string>
+</resources>
