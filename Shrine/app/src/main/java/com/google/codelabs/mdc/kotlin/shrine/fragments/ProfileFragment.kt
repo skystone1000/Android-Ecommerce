@@ -1,13 +1,13 @@
 package com.google.codelabs.mdc.kotlin.shrine.fragments
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
+import com.google.codelabs.mdc.kotlin.shrine.MainActivity
 import com.google.codelabs.mdc.kotlin.shrine.R
 import kotlinx.android.synthetic.main.shr_profile_fragment.*
 
@@ -52,7 +52,13 @@ class ProfileFragment : Fragment() {
             val editor = sharedPref.edit()
             editor.clear()
             editor.apply()
-            (activity as NavigationHost).navigateTo(LoginFragment(), false)
+
+            // Clearing backstack
+            val i = Intent(requireContext(), MainActivity::class.java)
+            i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(i)
+
+//            (activity as NavigationHost).navigateTo(LoginFragment(), false)
             // Check how to clear complete backstack
         }
     }
