@@ -7,13 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
 import com.google.codelabs.mdc.kotlin.shrine.R
 import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.User
-import kotlinx.android.synthetic.main.shr_register_fragment.*
-import kotlinx.android.synthetic.main.shr_register_fragment.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -39,23 +38,27 @@ class RegisterFragment : Fragment() {
         val view = inflater.inflate(R.layout.shr_register_fragment, container, false)
 
 
-        view.signup_button.setOnClickListener{
-            var noErrors = 0
-            noErrors += check(name_text_input)
-            noErrors += check(email_text_input)
-            noErrors += check(phone_text_input)
-            noErrors += check(organisation_text_input)
-            noErrors += check(password_text_input)
-            noErrors += check(confirm_password_text_input)
+        view.findViewById<View>(R.id.signup_button).setOnClickListener{
+            val passwordTextInput = view.findViewById<TextInputLayout>(R.id.password_text_input)
+            val passwordEditText = view.findViewById<TextInputEditText>(R.id.password_edit_text)
+            val confirmPasswordEditText = view.findViewById<TextInputEditText>(R.id.confirm_password_edit_text)
 
-            if (password_edit_text?.text.toString() != confirm_password_edit_text?.text.toString()) {
-                password_text_input.error = "Passwords Should Match"
+            var noErrors = 0
+            noErrors += check(view.findViewById(R.id.name_text_input))
+            noErrors += check(view.findViewById(R.id.email_text_input))
+            noErrors += check(view.findViewById(R.id.phone_text_input))
+            noErrors += check(view.findViewById(R.id.organisation_text_input))
+            noErrors += check(passwordTextInput)
+            noErrors += check(view.findViewById(R.id.confirm_password_text_input))
+
+            if (passwordEditText.text.toString() != confirmPasswordEditText.text.toString()) {
+                passwordTextInput.error = "Passwords Should Match"
                 Toast.makeText(requireContext(), "Passwords Should Match", Toast.LENGTH_SHORT).show()
                 noErrors += 1
             }
 
-            if (!isPasswordValid(password_edit_text?.text)) {
-                password_text_input.error = getString(R.string.shr_error_password)
+            if (!isPasswordValid(passwordEditText.text)) {
+                passwordTextInput.error = getString(R.string.shr_error_password)
                 noErrors += 1
             }
 
@@ -90,11 +93,12 @@ class RegisterFragment : Fragment() {
     }
 
     private fun userRegister() {
-        val name = name_edit_text?.text.toString().trim()
-        val email = email_edit_text?.text.toString().trim()
-        val phone = phone_edit_text?.text.toString().trim()
-        val organisation = organisation_edit_text?.text.toString().trim()
-        val password = password_edit_text?.text.toString().trim()
+        val view = requireView()
+        val name = view.findViewById<TextInputEditText>(R.id.name_edit_text).text.toString().trim()
+        val email = view.findViewById<TextInputEditText>(R.id.email_edit_text).text.toString().trim()
+        val phone = view.findViewById<TextInputEditText>(R.id.phone_edit_text).text.toString().trim()
+        val organisation = view.findViewById<TextInputEditText>(R.id.organisation_edit_text).text.toString().trim()
+        val password = view.findViewById<TextInputEditText>(R.id.password_edit_text).text.toString().trim()
 
         database = ShrineDatabase.getDatabase(requireContext())
         GlobalScope.launch {

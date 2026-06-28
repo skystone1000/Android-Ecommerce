@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
@@ -12,9 +13,6 @@ import com.google.codelabs.mdc.kotlin.shrine.R
 import com.google.codelabs.mdc.kotlin.shrine.adapters.lineargridlayout.CartRecyclerViewAdapter
 import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.CartItem
-import kotlinx.android.synthetic.main.shr_cart_fragment.*
-import kotlinx.android.synthetic.main.shr_cart_fragment.view.*
-import kotlinx.android.synthetic.main.shr_product_grid_fragment.view.*
 import kotlinx.coroutines.*
 
 
@@ -47,10 +45,11 @@ class CartFragment : Fragment() {
         val view = inflater.inflate(R.layout.shr_cart_fragment, container, false)
 
         // Set up the RecyclerView
-        view.cartRecyclerView.setHasFixedSize(true)
-        view.cartRecyclerView.layoutManager = GridLayoutManager(context, 1, RecyclerView.VERTICAL, false)
+        val cartRecyclerView = view.findViewById<RecyclerView>(R.id.cartRecyclerView)
+        cartRecyclerView.setHasFixedSize(true)
+        cartRecyclerView.layoutManager = GridLayoutManager(context, 1, RecyclerView.VERTICAL, false)
         val adapter = CartRecyclerViewAdapter(requireActivity(), cartList)
-        view.cartRecyclerView.adapter = adapter
+        cartRecyclerView.adapter = adapter
 
 
         return view
@@ -93,12 +92,13 @@ class CartFragment : Fragment() {
             totalCost += cartItem.product_price.toInt() * cartItem.product_quantity.toInt()
         }
 
-        cart_items_total_value.text = cartList.size.toString()
-        cart_items_price_value.text = totalCost.toString() + " $"
+        val view = requireView()
+        view.findViewById<TextView>(R.id.cart_items_total_value).text = cartList.size.toString()
+        view.findViewById<TextView>(R.id.cart_items_price_value).text = totalCost.toString() + " $"
 
 
         // Item Listener - Clear Cart
-        cart_clear_icon.setOnClickListener{
+        view.findViewById<View>(R.id.cart_clear_icon).setOnClickListener{
             val job = GlobalScope.launch {
                 database.cartItemDao().clearCart()
                 (activity as NavigationHost).navigateTo(CartFragment(), false)
@@ -106,7 +106,7 @@ class CartFragment : Fragment() {
         }
 
         // Item Listener - Checkout
-        cart_checkout.setOnClickListener{
+        view.findViewById<View>(R.id.cart_checkout).setOnClickListener{
             GlobalScope.launch {
                 database.cartItemDao().clearCart()
                 (activity as NavigationHost).navigateTo(OrderPlacedFragment(), false)

@@ -6,10 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.codelabs.mdc.kotlin.shrine.MainActivity
 import com.google.codelabs.mdc.kotlin.shrine.R
-import kotlinx.android.synthetic.main.shr_profile_fragment.*
 
 /**
  * A simple [Fragment] subclass.
@@ -41,12 +41,13 @@ class ProfileFragment : Fragment() {
         val userEmail = sharedPref.getString("user_email", "Undefined")
         val userPhone = sharedPref.getString("user_phone", "Undefined")
 
-        textView_username.text = userName
-        textView_email.text = userEmail
-        textView_phone.text = userPhone
+        val view = requireView()
+        view.findViewById<TextView>(R.id.textView_username).text = userName
+        view.findViewById<TextView>(R.id.textView_email).text = userEmail
+        view.findViewById<TextView>(R.id.textView_phone).text = userPhone
 
 
-        button_signOut.setOnClickListener{
+        view.findViewById<View>(R.id.button_signOut).setOnClickListener{
             // Clearing Shared Preferences on Logout
             val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE) ?: return@setOnClickListener
             val editor = sharedPref.edit()
