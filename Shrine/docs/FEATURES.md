@@ -35,12 +35,14 @@ All paths are relative to `Shrine/`.
 
 **End to end:**
 - UI: [`LoginFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/LoginFragment.kt) + `res/layout/shr_login_fragment.xml`.
-- The **"Username" field is matched against the user's email** (`UserDAO.getLogin(email)` queries `WHERE user_email = :email`).
-- Validation before the DB call: username non-empty; password ≥ 8 chars (`isPasswordValid`).
-- Auth: in `userLogin()` (on `Dispatchers.IO`), compares the stored `user_pass` to the entered password.
-- On success: caches `user_id`, `user_name`, `user_email`, `user_phone` into per-Activity `SharedPreferences`, then navigates to `ProductGridFragment`.
-- On failure: nothing happens (no error message — the failure branch is commented out).
+- The login field is labeled **"Email"** and is matched against the user's email (`UserDAO.getLogin(email)` queries `WHERE user_email = :email`).
+- Validation before the DB call: email non-empty; password ≥ 8 chars (`isPasswordValid`).
+- Auth: `login()` runs on `viewLifecycleOwner.lifecycleScope`; the DB lookup is done in `withContext(Dispatchers.IO)`, then the result is handled on the main thread. It compares the stored `user_pass` to the entered password.
+- On success: caches `user_id`, `user_name`, `user_email`, `user_phone` into per-Activity `SharedPreferences`, then navigates to `ProductGridFragment` (on the main thread).
+- On failure (wrong password or unknown email): shows the error "Incorrect email or password." (`shr_error_invalid_credentials`) on the password field; stays on the login screen.
 - Entry to Register: the "Register" button navigates to `RegisterFragment`.
+
+> Implemented by [plan_1_login](plan_1_login.md). Note: the password is still compared in plaintext — see [BUG_INVENTORY.md](BUG_INVENTORY.md) B3 (plan_4_security).
 
 ---
 

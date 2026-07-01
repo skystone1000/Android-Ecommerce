@@ -1,9 +1,11 @@
 ---
 title: Login reliability and feedback
-status: active
+status: completed
 last_updated: 2026-06-27
 scope: Make login navigation reliable (main-thread), give failure feedback, fix the username/email mismatch, and establish the lifecycle-safe coroutine→navigation pattern reused by later plans.
 ---
+
+> **Completed 2026-06-27.** Implemented and verified on-device (emulator). Build green. Fixes B4, B5; partially fixes B2, B6 (login paths). See the Definition of done at the bottom; all criteria met.
 
 # plan_1_login — Login reliability and feedback
 
