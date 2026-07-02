@@ -12,16 +12,17 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 
 **Changelog**
 - 2026-06-27 — plan_1_login implemented: **B4** and **B5** fixed; **B2** and **B6** partially fixed (login paths only; cart/adapter/register paths remain).
+- 2026-06-27 — plan_2_cart implemented: **B1** and **B7** fixed; **B2** now fully fixed (all three call sites navigate on the main thread); **B6** still partial (cart + cart-adapter done; add-to-cart adapter and register remain).
 
 | # | Severity | Bug | Location | Fix in | Status |
 |---|----------|-----|----------|--------|--------|
-| B1 | High | Cart never shows real items | `fragments/CartFragment.kt:51`, `:26`, `:61/:78/:81` | plan_2_cart | ⬜ Open |
-| B2 | High | Fragment navigation on background threads | `fragments/LoginFragment.kt:46→:84`; `fragments/CartFragment.kt:102→:104`, `:110→:112`; `adapters/lineargridlayout/CartRecyclerViewAdapter.kt:44→:46` | plan_1_login, plan_2_cart | 🟡 Partial — login fixed; cart/adapter open |
+| B1 | High | Cart never shows real items | `fragments/CartFragment.kt:51`, `:26`, `:61/:78/:81` | plan_2_cart | ✅ Fixed (plan_2_cart) |
+| B2 | High | Fragment navigation on background threads | `fragments/LoginFragment.kt:46→:84`; `fragments/CartFragment.kt:102→:104`, `:110→:112`; `adapters/lineargridlayout/CartRecyclerViewAdapter.kt:44→:46` | plan_1_login, plan_2_cart | ✅ Fixed (plan_1_login + plan_2_cart) |
 | B3 | High | Passwords stored/compared in plaintext | `models/User.kt:14`; `fragments/RegisterFragment.kt:104`; `fragments/LoginFragment.kt:72` | plan_4_security | ⬜ Open |
 | B4 | Medium | Login silently fails (no error feedback) | `fragments/LoginFragment.kt:72` (else branch commented) | plan_1_login | ✅ Fixed (plan_1_login) |
 | B5 | Medium | "Username" field actually requires the email | `fragments/LoginFragment.kt` + `res/layout/shr_login_fragment.xml`; query at `database/UserDAO.kt:13` | plan_1_login | ✅ Fixed (plan_1_login) |
-| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `fragments/RegisterFragment.kt:104`; `fragments/CartFragment.kt:60/102/110`; both adapters `:44/:46` | plan_1_login, plan_2_cart | 🟡 Partial — login fixed; register/cart/adapters open |
-| B7 | Medium | `NumberFormatException` risk in cart totals | `fragments/CartFragment.kt:92` (`product_price.toInt()`, `product_quantity.toInt()`) | plan_2_cart | ⬜ Open |
+| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `fragments/RegisterFragment.kt:104`; `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt:46` (add-to-cart) | plan_1_login, plan_2_cart, plan_4_security | 🟡 Partial — login + cart + cart-adapter fixed; add-to-cart adapter & register remain |
+| B7 | Medium | `NumberFormatException` risk in cart totals | `fragments/CartFragment.kt:92` (`product_price.toInt()`, `product_quantity.toInt()`) | plan_2_cart | ✅ Fixed (plan_2_cart) |
 | B8 | Low* | `PrductDAO` queries the wrong table | `database/PrductDAO.kt:17` (`SELECT * FROM cart`), `:20` (`DELETE FROM cart`) | plan_3_catalog / plan_5_cleanup | ⬜ Open |
 | B9 | Medium | No duplicate-email guard at registration | `database/UserDAO.kt` (no uniqueness); `fragments/RegisterFragment.kt:104` | plan_4_security | ⬜ Open |
 | B10 | Low | Deprecated `defaultDisplay.getMetrics` | `NavigationIconClickListener.kt:27` | plan_5_cleanup | ⬜ Open |
@@ -35,13 +36,16 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 
 ## Details
 
-### B1 — Cart never displays real items (High)
-`CartFragment` seeds `cartList` with a placeholder `CartItem(0,0,"Test","123","","10")` (`:26`). `onCreateView` binds the adapter to that list reference (`:51`). The real load happens later in `initialization()`, which **reassigns** `cartList` to a brand-new list (`:61`, `:78`, `:81`) on a background coroutine. The adapter still points at the original placeholder list, and **no `notifyDataSetChanged()`/`notifyItem*` is ever called** (verified: zero occurrences in the module). Net effect: the cart screen always renders the single "Test" placeholder row regardless of what was added. The totals in `onResume` read the `cartList` *field*, so they may or may not reflect the reload depending on timing — an inconsistency between the list and the totals.
+### B1 — Cart never displays real items (High) — ✅ Fixed (plan_2_cart)
+`CartFragment` seeded `cartList` with a placeholder `CartItem(0,0,"Test","123","","10")` and bound the adapter to that reference, then reassigned `cartList` on a background coroutine with **no `notifyDataSetChanged()`** — so the cart always rendered the single "Test" row regardless of what was added, and the `onResume` totals could disagree with the list.
 
-### B2 — Fragment transactions from background threads (High) — 🟡 Partial
-`navigateTo(...)` ultimately calls `supportFragmentManager.beginTransaction()...commit()`, which must run on the main thread. It is invoked from inside `Dispatchers.IO` / `GlobalScope` coroutines in login, cart clear/checkout (`CartFragment.kt:104`, `:112`), and item removal (`CartRecyclerViewAdapter.kt:46`). This is why login navigation was observed to be unreliable. Fix: do DB work off-main, then switch to the main thread for navigation.
+> **2026-06-27 (plan_2_cart):** removed the placeholder seed; the adapter now exposes `submit(list)` (replaces backing list + `notifyDataSetChanged()`); a single `viewLifecycleOwner.lifecycleScope.launch` loads from the DB in `withContext(Dispatchers.IO)`, regroups by `product_id`, then updates the adapter **and** totals together on the main thread. Verified on-device: adding iPhone 9 ×2 + iPhone X ×1 shows the real rows with quantities 2/1, count 2, total 524 $.
 
-> **2026-06-27 (plan_1_login):** the login path is fixed — `LoginFragment` now does the DB lookup in `withContext(Dispatchers.IO)` inside `viewLifecycleOwner.lifecycleScope.launch`, then navigates on the main thread. The cart and `CartRecyclerViewAdapter` paths remain open (plan_2_cart).
+### B2 — Fragment transactions from background threads (High) — ✅ Fixed
+`navigateTo(...)` ultimately calls `supportFragmentManager.beginTransaction()...commit()`, which must run on the main thread. It was invoked from inside `Dispatchers.IO` / `GlobalScope` coroutines in login, cart clear/checkout, and item removal. This is why login navigation was observed to be unreliable.
+
+> **2026-06-27 (plan_1_login):** login fixed — DB lookup in `withContext(Dispatchers.IO)` inside `viewLifecycleOwner.lifecycleScope.launch`, navigation on the main thread.
+> **2026-06-27 (plan_2_cart):** the remaining two sites are fixed — cart clear/checkout use `viewLifecycleOwner.lifecycleScope` (DB delete off-main, navigate on main); `CartRecyclerViewAdapter` removal uses `(context as AppCompatActivity).lifecycleScope` the same way. All `navigateTo` calls now run on the main thread. Verified on-device (remove, clear, checkout all navigate correctly with no crash).
 
 ### B3 — Plaintext passwords (High, security)
 `User.user_pass` holds the raw password; registration inserts it as-is (`RegisterFragment.kt:104`) and login compares raw strings (`LoginFragment.kt:72`). Anyone with DB access (rooted device, backup) reads credentials. Fix: hash with a salted KDF before storage; compare hashes.
@@ -59,10 +63,13 @@ The login layout hint said "Username", but the auth path calls `UserDAO.getLogin
 ### B6 — `GlobalScope` everywhere (Medium) — 🟡 Partial
 DB writes/reads for register, login, add-to-cart, remove-item, clear, and checkout ran on `GlobalScope` / ad-hoc `CoroutineScope(Dispatchers.IO)`, which ignore fragment/view lifecycle. Coroutines can outlive the view and touch destroyed UI, and uncaught exceptions crash the process. Fix: use `viewLifecycleOwner.lifecycleScope` (fragments) / a scoped approach for adapters.
 
-> **2026-06-27 (plan_1_login):** login now uses `viewLifecycleOwner.lifecycleScope`. Register (`RegisterFragment.kt:104`), cart (`CartFragment.kt`), and both adapters still use `GlobalScope` — open under plan_2_cart / plan_4_security.
+> **2026-06-27 (plan_1_login):** login now uses `viewLifecycleOwner.lifecycleScope`.
+> **2026-06-27 (plan_2_cart):** `CartFragment` (load/clear/checkout) and `CartRecyclerViewAdapter` (remove) now use lifecycle scopes instead of `GlobalScope`. Still open: `ProductCardRecyclerViewAdapter.kt:46` (add-to-cart insert) and `RegisterFragment.kt:104` (register insert) — to be addressed with plan_4_security / a future add-to-cart cleanup.
 
-### B7 — Cart total parsing can crash (Medium)
-`CartFragment.kt:92` does `cartItem.product_price.toInt() * cartItem.product_quantity.toInt()`. `product_price`/`product_quantity` are free-form `String`s. It works only because the hardcoded catalog uses plain integer strings; any price containing `$`, decimals, or commas throws `NumberFormatException` and crashes the cart. Fix: store numeric types or parse defensively.
+### B7 — Cart total parsing can crash (Medium) — ✅ Fixed (plan_2_cart)
+`CartFragment` did `cartItem.product_price.toInt() * cartItem.product_quantity.toInt()` on free-form `String`s; any price containing `$`, decimals, or commas would throw `NumberFormatException` and crash the cart.
+
+> **2026-06-27 (plan_2_cart):** totals now parse with `removePrefix("$").trim().toIntOrNull() ?: 0` for price and `toIntOrNull() ?: 0` for quantity, so malformed data yields 0 instead of a crash.
 
 ### B8 — `PrductDAO` targets the `cart` table (Low today)
 `PrductDAO.getAll()` returns `List<Product>` from `SELECT * FROM cart`, and `clearCart()` does `DELETE FROM cart` (`:17`,`:20`). Both are wrong for a product DAO. Harmless only because nothing calls them. Fix: correct the queries when wiring a real catalog (plan_3) or delete the DAO (plan_5).

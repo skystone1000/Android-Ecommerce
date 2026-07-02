@@ -85,12 +85,14 @@ All paths are relative to `Shrine/`.
 
 **End to end:**
 - UI: [`CartFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/CartFragment.kt) + `res/layout/shr_cart_fragment.xml`; rows via [`CartRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/lineargridlayout/CartRecyclerViewAdapter.kt) + `res/layout/shr_cart_item.xml`.
-- Load + regroup: `initialization()` reads all rows with `CartItemDAO.getAll()`, then **groups duplicate `product_id`s into a `HashMap` and counts occurrences** to derive a per-product quantity.
-- Totals (`onResume`): `count = cartList.size`; `total = Σ(product_price × product_quantity)`, rendered into `cart_items_total_value` / `cart_items_price_value`.
-- Remove one item: a row's delete icon calls `CartItemDAO.deleteCartItem(product_id)` then reloads `CartFragment` (toast "… Removed from the cart").
-- Clear cart: `cart_clear_icon` calls `CartItemDAO.clearCart()` then reloads `CartFragment`.
-- Checkout: `cart_checkout` calls `CartItemDAO.clearCart()` then navigates to `OrderPlacedFragment`.
+- Load + regroup: `loadCart()` runs on `viewLifecycleOwner.lifecycleScope`; it reads all rows with `CartItemDAO.getAll()` in `withContext(Dispatchers.IO)`, then `regroupByProduct()` collapses duplicate `product_id`s into one entry whose quantity is the row count. The result is pushed to the adapter via `adapter.submit(list)` (which calls `notifyDataSetChanged()`) on the main thread.
+- Totals: computed in `updateTotals()` right after the list loads (not in `onResume`): `count = items.size` (distinct product lines); `total = Σ(price × quantity)` with defensive parsing (`removePrefix("$").trim().toIntOrNull() ?: 0`). Rendered into `cart_items_total_value` / `cart_items_price_value`.
+- Remove one item: a row's delete icon calls `CartItemDAO.deleteCartItem(product_id)` off-main, then re-opens `CartFragment` on the main thread (toast "… Removed from the cart"). Note: this removes *all* rows for that product.
+- Clear cart: `cart_clear_icon` calls `CartItemDAO.clearCart()` off-main, then reloads `CartFragment` on the main thread.
+- Checkout: `cart_checkout` calls `CartItemDAO.clearCart()` off-main, then navigates to `OrderPlacedFragment` on the main thread.
 - Navigation in: the toolbar cart icon on the product grid → `MainActivity.onOptionsItemSelected` (`R.id.cart_icon`) → `gotoCart()` → `CartFragment`.
+
+> Corrected by [plan_2_cart](plan_2_cart.md): the cart previously showed only a hardcoded placeholder row (B1). It now displays the real cart contents, and all cart DB work/navigation is lifecycle-scoped and main-thread-safe.
 
 ---
 

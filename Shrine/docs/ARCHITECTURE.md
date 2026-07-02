@@ -93,8 +93,8 @@ Declared in [app/build.gradle](../app/build.gradle):
 
 These are accurate observations of the current code, surfaced so docs match reality (do not assume they are intentional design):
 
-- **Fragment transactions from background threads.** `CartFragment` and `CartRecyclerViewAdapter` call `navigateTo(...)` from inside `Dispatchers.IO` / `GlobalScope` coroutines. UI/fragment transactions should run on the main thread; this is fragile. _(Fixed for `LoginFragment` in plan_1_login — it now navigates on the main thread via `viewLifecycleOwner.lifecycleScope`. Cart paths remain — plan_2_cart.)_
-- **`GlobalScope` usage** for DB writes (add to cart, register, remove item) is not lifecycle-aware. _(Login was migrated to `viewLifecycleOwner.lifecycleScope` in plan_1_login; other sites remain.)_
+- ~~**Fragment transactions from background threads.**~~ _Resolved (plan_1_login + plan_2_cart): all `navigateTo(...)` calls — login, cart clear/checkout, and cart-item removal — now run on the main thread via lifecycle scopes._
+- **`GlobalScope` usage** for DB writes is not lifecycle-aware. _Remaining: `ProductCardRecyclerViewAdapter` (add-to-cart insert) and `RegisterFragment` (register insert). Login and all cart paths were migrated to lifecycle scopes in plan_1_login / plan_2_cart._
 - **Plaintext passwords.** `User.user_pass` is stored and compared in plaintext. _(Login failures are no longer silent as of plan_1_login — they show an inline error; plaintext storage/comparison itself is still open: plan_4_security.)_
 - **Hardcoded catalog.** `ProductGridFragment` ignores the Room `products` table and the bundled `products.json`; it uses an inline `List<Product>`.
 - **Dead code paths.** `PrductDAO`/`products` table, `ProductEntry` + `R.raw.products` (`products.json`), and the staggered-grid adapters (`StaggeredProductCardRecyclerViewAdapter`, `StaggeredProductCardViewHolder`) are defined but never reached from the active UI flow. `PrductDAO.getAll()`/`clearCart()` also query the `cart` table, not `products`.

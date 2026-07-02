@@ -1,9 +1,11 @@
 ---
 title: Cart correctness
-status: active
+status: completed
 last_updated: 2026-06-27
 scope: Make the cart display real items, compute totals safely, and run all cart DB/navigation on the correct thread and lifecycle scope.
 ---
+
+> **Completed 2026-06-27.** Implemented and verified on-device. Fixes B1, B7; completes B2 (all nav now main-thread); advances B6 (cart paths off `GlobalScope`). Verified: add iPhone 9 ×2 + iPhone X ×1 → cart shows correct rows/quantities, count 2, total 524 $; remove, clear, and checkout all work with no crash.
 
 # plan_2_cart — Cart correctness
 
