@@ -43,7 +43,7 @@ Shrine/
         │       ├── menu/shr_toolbar_menu.xml   # Toolbar cart icon
         │       ├── mipmap-*/      # Launcher icons
         │       ├── animator/      # Button state-list animator
-        │       ├── raw/products.json           # DEAD CODE (never loaded at runtime)
+        │       ├── raw/products.json           # Product catalog seed (loaded by ProductSeed)
         │       └── values/        # colors.xml, dimens.xml, strings.xml, styles.xml
         ├── test/                  # ExampleUnitTest.kt (template only)
         └── androidTest/           # ExampleInstrumentedTest.kt (template only)
@@ -63,7 +63,7 @@ Shrine/
 ### `database/`, `models/`, `adapters/`, `network/`
 
 - **`models/`**: `User` (`users` table), `CartItem` (`cart` table), `Product` (`products` table). All are Room `@Entity` data classes with an auto-generated primary key.
-- **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, version 1). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/getAll/clearCart/deleteCartItem), `PrductDAO` (declared but unused; note the misspelled filename `PrductDAO.kt`).
+- **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, version 1). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/getAll/clearCart/deleteCartItem), `ProductDAO` (insertAll/getAll/count — backs the product grid), and `ProductSeed` (parses `res/raw/products.json` to seed the `products` table on first run).
 - **`adapters/lineargridlayout/`**: `ProductCardRecyclerViewAdapter` (grid of products → tap adds to cart) and `CartRecyclerViewAdapter` (cart rows → tap remove deletes item). **Active.**
 - **`adapters/staggeredgridlayout/`**: `StaggeredProductCardRecyclerViewAdapter` + `StaggeredProductCardViewHolder`. **Dead code** — not instantiated anywhere.
 - **`network/`**: `ImageRequester` (Volley image loading; **active**, used by the adapters). `ProductEntry` + its `initProductEntryList(R.raw.products)` loader is **dead code** — referenced only inside commented-out blocks.
@@ -116,7 +116,7 @@ The APK's application id and launch component is `com.google.codelabs.mdc.kotlin
 | Add/modify a screen | Create a `Fragment` in `fragments/` + a `shr_*.xml` layout; navigate via `navigateTo(...)`. |
 | Change navigation between screens | The `navigateTo(...)` call sites in fragments/adapters; `MainActivity.navigateTo`. |
 | Add a DB table/query | Add an `@Entity` in `models/`, a DAO in `database/`, register both in `ShrineDatabase` (and bump `version`). |
-| Change the product catalog | `ProductGridFragment.onCreateView` (hardcoded `listOf(Product(...))`). |
+| Change the product catalog | `res/raw/products.json` (seed data) → loaded by `ProductSeed` into the `products` table; read in `ProductGridFragment.loadCatalog()` via `ProductDAO`. |
 | Change cart logic/totals | `CartFragment` (load + regroup + totals) and `CartRecyclerViewAdapter` (per-row remove). |
 | Change login/registration rules | `LoginFragment.isPasswordValid` / `userLogin`; `RegisterFragment.check` / `userRegister`. |
 | Change product image loading | `network/ImageRequester`. |

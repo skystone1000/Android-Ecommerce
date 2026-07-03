@@ -1,9 +1,11 @@
 ---
 title: Data-driven product catalog
-status: active
+status: completed
 last_updated: 2026-06-27
 scope: Replace the hardcoded product list with a real data source (Room-seeded from products.json), fix product images, and correct the products DAO.
 ---
+
+> **Completed 2026-06-27.** Implemented and verified on-device. Fixes B8; partially fixes B11 (catalog + images done; staggered adapters and `ProductEntry` left for plan_5). Verified: fresh install seeds 17 rows into the `products` table, grid loads from the DB, every card shows a branded placeholder (all remote image hosts are 404/000), and add-to-cart → cart works with the new product ids. Image strategy changed from "stale remote URLs" to a bundled `shr_logo` placeholder because no working product-image host was available.
 
 # plan_3_catalog — Data-driven product catalog
 

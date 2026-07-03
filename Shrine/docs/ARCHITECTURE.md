@@ -28,7 +28,7 @@ Shrine is a single-module Android application written in Kotlin. It originates f
 | Fragments (`fragments/`) | UI screens | One fragment per screen: Login, Register, ProductGrid, Cart, OrderPlaced, Profile. |
 | RecyclerView adapters (`adapters/`) | UI binding | Bind product/cart lists to views and handle item taps (add to cart, remove from cart). |
 | Models (`models/`) | Room `@Entity` data classes | `User`, `CartItem`, `Product` — table row shapes. |
-| DAOs (`database/`) | Room `@Dao` interfaces | `UserDAO`, `CartItemDAO`, `PrductDAO` — database queries. |
+| DAOs (`database/`) | Room `@Dao` interfaces | `UserDAO`, `CartItemDAO`, `ProductDAO` — database queries. |
 | `ShrineDatabase` | Room `@Database` | Singleton database with the three DAOs. |
 | `ImageRequester` | object | Loads remote product images over HTTP via Volley, with an in-memory `LruCache`. |
 | `NavigationIconClickListener` | `View.OnClickListener` | Animates the product-grid "backdrop" reveal when the toolbar nav icon is tapped. |
@@ -52,7 +52,7 @@ Each hop calls `(<host> as NavigationHost).navigateTo(fragment, addToBackstack)`
 ## Data flow
 
 1. **Authentication.** `RegisterFragment` writes a `User` row via `UserDAO.insertUser`. `LoginFragment` reads it back with `UserDAO.getLogin(email)` and compares the stored `user_pass` to the entered password. On success it caches `user_id`, `user_name`, `user_email`, `user_phone` in `SharedPreferences`.
-2. **Catalog.** `ProductGridFragment` builds a **hardcoded** in-memory `List<Product>` (17 items) and passes it to `ProductCardRecyclerViewAdapter`. Product images are fetched by URL through `ImageRequester`.
+2. **Catalog.** `ProductGridFragment` loads the catalog from the Room `products` table via `ProductDAO`, seeding it from `res/raw/products.json` (`ProductSeed`) on first run, and passes it to `ProductCardRecyclerViewAdapter`. Product images are attempted by URL through `ImageRequester`, falling back to a bundled `shr_logo` placeholder.
 3. **Cart.** Tapping a product card inserts a `CartItem` (quantity `"1"`) via `CartItemDAO.insertCartItem`. `CartFragment` loads all cart rows with `CartItemDAO.getAll()`, then **regroups duplicate `product_id`s in memory** to compute per-product quantities, and renders count + total price.
 4. **Profile/session.** `ProfileFragment` reads the cached user fields from `SharedPreferences`. Sign-out clears those preferences and restarts the Activity.
 
@@ -96,8 +96,8 @@ These are accurate observations of the current code, surfaced so docs match real
 - ~~**Fragment transactions from background threads.**~~ _Resolved (plan_1_login + plan_2_cart): all `navigateTo(...)` calls — login, cart clear/checkout, and cart-item removal — now run on the main thread via lifecycle scopes._
 - **`GlobalScope` usage** for DB writes is not lifecycle-aware. _Remaining: `ProductCardRecyclerViewAdapter` (add-to-cart insert) and `RegisterFragment` (register insert). Login and all cart paths were migrated to lifecycle scopes in plan_1_login / plan_2_cart._
 - **Plaintext passwords.** `User.user_pass` is stored and compared in plaintext. _(Login failures are no longer silent as of plan_1_login — they show an inline error; plaintext storage/comparison itself is still open: plan_4_security.)_
-- **Hardcoded catalog.** `ProductGridFragment` ignores the Room `products` table and the bundled `products.json`; it uses an inline `List<Product>`.
-- **Dead code paths.** `PrductDAO`/`products` table, `ProductEntry` + `R.raw.products` (`products.json`), and the staggered-grid adapters (`StaggeredProductCardRecyclerViewAdapter`, `StaggeredProductCardViewHolder`) are defined but never reached from the active UI flow. `PrductDAO.getAll()`/`clearCart()` also query the `cart` table, not `products`.
-- **Live image URLs may be stale.** Product image URLs (both the hardcoded list's `dummyjson.com` URLs and `products.json`'s `material-vignettes` URLs) may no longer resolve, so product images can render blank.
+- ~~**Hardcoded catalog.**~~ _Resolved (plan_3_catalog): the catalog is now seeded into the Room `products` table from `res/raw/products.json` and loaded via `ProductDAO`._
+- **Dead code paths.** The staggered-grid adapters (`StaggeredProductCardRecyclerViewAdapter`, `StaggeredProductCardViewHolder`) and `network/ProductEntry.kt` are defined but never reached from the active UI flow. _(Slated for plan_5_cleanup. As of plan_3_catalog the `products` table, `ProductDAO`, and `products.json` are now active.)_
+- ~~**Live image URLs may be stale.**~~ _Mitigated (plan_3_catalog): all known product image hosts return 404/000, so cards now render the bundled `shr_logo` placeholder via the `NetworkImageView` default/error image instead of appearing blank._
 
 See [FEATURES.md](FEATURES.md) for per-feature flow and [CODEBASE.md](CODEBASE.md) for the file-by-file map.

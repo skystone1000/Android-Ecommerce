@@ -13,6 +13,7 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 **Changelog**
 - 2026-06-27 — plan_1_login implemented: **B4** and **B5** fixed; **B2** and **B6** partially fixed (login paths only; cart/adapter/register paths remain).
 - 2026-06-27 — plan_2_cart implemented: **B1** and **B7** fixed; **B2** now fully fixed (all three call sites navigate on the main thread); **B6** still partial (cart + cart-adapter done; add-to-cart adapter and register remain).
+- 2026-06-27 — plan_3_catalog implemented: **B8** fixed (DAO renamed `ProductDAO`, queries the `products` table, now used); **B11** partially fixed (hardcoded catalog removed, images render a branded placeholder, `products.json` now seeds the DB; staggered adapters + `ProductEntry` remain for plan_5).
 
 | # | Severity | Bug | Location | Fix in | Status |
 |---|----------|-----|----------|--------|--------|
@@ -23,10 +24,10 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 | B5 | Medium | "Username" field actually requires the email | `fragments/LoginFragment.kt` + `res/layout/shr_login_fragment.xml`; query at `database/UserDAO.kt:13` | plan_1_login | ✅ Fixed (plan_1_login) |
 | B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `fragments/RegisterFragment.kt:104`; `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt:46` (add-to-cart) | plan_1_login, plan_2_cart, plan_4_security | 🟡 Partial — login + cart + cart-adapter fixed; add-to-cart adapter & register remain |
 | B7 | Medium | `NumberFormatException` risk in cart totals | `fragments/CartFragment.kt:92` (`product_price.toInt()`, `product_quantity.toInt()`) | plan_2_cart | ✅ Fixed (plan_2_cart) |
-| B8 | Low* | `PrductDAO` queries the wrong table | `database/PrductDAO.kt:17` (`SELECT * FROM cart`), `:20` (`DELETE FROM cart`) | plan_3_catalog / plan_5_cleanup | ⬜ Open |
+| B8 | Low* | `PrductDAO` queries the wrong table | `database/PrductDAO.kt:17` (`SELECT * FROM cart`), `:20` (`DELETE FROM cart`) | plan_3_catalog | ✅ Fixed (plan_3_catalog) |
 | B9 | Medium | No duplicate-email guard at registration | `database/UserDAO.kt` (no uniqueness); `fragments/RegisterFragment.kt:104` | plan_4_security | ⬜ Open |
 | B10 | Low | Deprecated `defaultDisplay.getMetrics` | `NavigationIconClickListener.kt:27` | plan_5_cleanup | ⬜ Open |
-| B11 | Low | Dead code + stale image URLs | `adapters/staggeredgridlayout/*`, `network/ProductEntry.kt`, `res/raw/products.json`; hardcoded list in `fragments/ProductGridFragment.kt` | plan_3_catalog, plan_5_cleanup | ⬜ Open |
+| B11 | Low | Dead code + stale image URLs | `adapters/staggeredgridlayout/*`, `network/ProductEntry.kt`, `res/raw/products.json`; hardcoded list in `fragments/ProductGridFragment.kt` | plan_3_catalog, plan_5_cleanup | 🟡 Partial — catalog/images fixed; staggered adapters + `ProductEntry` remain |
 | B12 | Low | Misplaced `@RequiresApi` on an `if` statement | `fragments/OrderPlacedFragment.kt:45` | plan_5_cleanup | ⬜ Open |
 | B13 | Low | `targetSdk 33` lags `compileSdk 34` | `app/build.gradle:7,11` | plan_5_cleanup | ⬜ Open |
 
@@ -71,15 +72,17 @@ DB writes/reads for register, login, add-to-cart, remove-item, clear, and checko
 
 > **2026-06-27 (plan_2_cart):** totals now parse with `removePrefix("$").trim().toIntOrNull() ?: 0` for price and `toIntOrNull() ?: 0` for quantity, so malformed data yields 0 instead of a crash.
 
-### B8 — `PrductDAO` targets the `cart` table (Low today)
-`PrductDAO.getAll()` returns `List<Product>` from `SELECT * FROM cart`, and `clearCart()` does `DELETE FROM cart` (`:17`,`:20`). Both are wrong for a product DAO. Harmless only because nothing calls them. Fix: correct the queries when wiring a real catalog (plan_3) or delete the DAO (plan_5).
+### B8 — `PrductDAO` targets the `cart` table (Low today) — ✅ Fixed (plan_3_catalog)
+`PrductDAO.getAll()` returned `List<Product>` from `SELECT * FROM cart`, and `clearCart()` did `DELETE FROM cart` — both wrong for a product DAO. Harmless only because nothing called them.
+
+> **2026-06-27 (plan_3_catalog):** renamed `PrductDAO` → `ProductDAO` (file `database/ProductDAO.kt`); replaced the bogus queries with `getAll()`/`count()` on the `products` table and an `insertAll(...)`. It is now the catalog's data source (used by `ProductGridFragment`).
 
 ### B9 — Duplicate registrations (Medium)
 Nothing prevents two `User` rows with the same `user_email`. `getLogin` returns a single row, so behavior with duplicates is undefined. Fix: unique index on `user_email` + pre-insert existence check with a clear error.
 
 ### B10–B13 — Low
 - **B10**: `Activity.windowManager.defaultDisplay.getMetrics()` is deprecated (API 30+); use `WindowMetrics`/`Resources.displayMetrics`.
-- **B11**: `StaggeredProductCardRecyclerViewAdapter`/`...ViewHolder`, `ProductEntry`/`products.json` are unreachable; the active catalog is hardcoded with image URLs that may no longer resolve (blank images).
+- **B11** — 🟡 Partial (plan_3_catalog): the hardcoded catalog is gone (now seeded into Room from `products.json` and loaded via `ProductDAO`), and product images now show a branded `shr_logo` placeholder via `NetworkImageView` default/error image, so cards are never blank (verified: all remote product URLs return 404/000). **Still dead** and slated for plan_5: `StaggeredProductCardRecyclerViewAdapter`/`...ViewHolder` and `network/ProductEntry.kt` (its `initProductEntryList` no longer matches the repurposed `products.json` schema but is never called).
 - **B12**: `@RequiresApi(LOLLIPOP)` annotates an `if` statement in `OrderPlacedFragment` rather than a method; `minSdk 16` makes the guard meaningful but the placement is wrong.
 - **B13**: `targetSdk 33` while `compileSdk 34`; align `targetSdk` to 34 after a quick behavior check.
 

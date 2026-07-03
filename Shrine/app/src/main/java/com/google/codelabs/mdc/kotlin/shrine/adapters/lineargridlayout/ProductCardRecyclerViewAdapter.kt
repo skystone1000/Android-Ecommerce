@@ -1,5 +1,6 @@
 package com.google.codelabs.mdc.kotlin.shrine.adapters.lineargridlayout
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -13,8 +14,6 @@ import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.CartItem
 import com.google.codelabs.mdc.kotlin.shrine.models.Product
 import com.google.codelabs.mdc.kotlin.shrine.network.ImageRequester
-
-import com.google.codelabs.mdc.kotlin.shrine.network.ProductEntry
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -22,10 +21,17 @@ import kotlinx.coroutines.launch
  * Adapter used to show a simple grid of products.
  */
 class ProductCardRecyclerViewAdapter internal constructor(
-    val context: Context, private val productList: List<Product>
+    val context: Context, private var productList: MutableList<Product>
 ) : RecyclerView.Adapter<ProductCardRecyclerViewAdapter.ProductCardViewHolder>() {
 
     lateinit var database: ShrineDatabase
+
+    /** Replace the backing list and refresh the view. Call on the main thread. */
+    @SuppressLint("NotifyDataSetChanged")
+    fun submit(items: MutableList<Product>) {
+        productList = items
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductCardViewHolder {
         val layoutView = LayoutInflater.from(parent.context).inflate(R.layout.shr_product_card, parent, false)
@@ -37,14 +43,23 @@ class ProductCardRecyclerViewAdapter internal constructor(
             val product = productList[position]
             holder.productTitle.text = product.product_name
             holder.productPrice.text = product.product_price + " $"
+            // Show a branded placeholder while loading and if the image URL fails to resolve,
+            // so cards are never blank.
+            holder.productImage.setDefaultImageResId(R.drawable.shr_logo)
+            holder.productImage.setErrorImageResId(R.drawable.shr_logo)
             ImageRequester.setImageFromUrl(holder.productImage, product.product_url)
         }
 
         holder.itemView.setOnClickListener{
-            Toast.makeText(context, "Item: " + productList[position].product_name + " Added to cart", Toast.LENGTH_SHORT ).show()
+            val pos = holder.adapterPosition
+            if (pos == RecyclerView.NO_POSITION || pos >= productList.size) return@setOnClickListener
+            val product = productList[pos]
+            Toast.makeText(context, "Item: " + product.product_name + " Added to cart", Toast.LENGTH_SHORT ).show()
             database = ShrineDatabase.getDatabase(context)
             GlobalScope.launch {
-                database.cartItemDao().insertCartItem(CartItem(0,productList[position].product_id, productList[position].product_name, productList[position].product_price, productList[position].product_url, "1"))
+                database.cartItemDao().insertCartItem(
+                    CartItem(0, product.product_id, product.product_name, product.product_price, product.product_url, "1")
+                )
             }
         }
     }
@@ -57,7 +72,5 @@ class ProductCardRecyclerViewAdapter internal constructor(
         var productImage: NetworkImageView = itemView.findViewById(R.id.product_image)
         var productTitle: TextView = itemView.findViewById(R.id.product_title)
         var productPrice: TextView = itemView.findViewById(R.id.product_price)
-//        var productCount: CounterView = itemView.findViewById(R.id.counterView)
     }
 }
-

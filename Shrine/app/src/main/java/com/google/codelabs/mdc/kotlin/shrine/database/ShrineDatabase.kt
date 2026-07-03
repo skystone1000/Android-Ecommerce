@@ -11,7 +11,7 @@ import com.google.codelabs.mdc.kotlin.shrine.models.User
 @Database(entities = [CartItem::class, User::class, Product::class], version = 1)
 abstract class ShrineDatabase : RoomDatabase() {
     abstract fun cartItemDao(): CartItemDAO
-    abstract fun productDao(): PrductDAO
+    abstract fun productDao(): ProductDAO
     abstract fun userDao(): UserDAO
 
     companion object{

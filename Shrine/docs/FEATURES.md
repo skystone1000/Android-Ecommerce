@@ -52,10 +52,12 @@ All paths are relative to `Shrine/`.
 
 **End to end:**
 - UI: [`ProductGridFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/ProductGridFragment.kt) + `res/layout/shr_product_grid_fragment.xml` (which `<include>`s `shr_backdrop.xml`).
-- Data: a **hardcoded** `List<Product>` of 17 items built inline in `onCreateView` (the Room `products` table and `products.json` are not used).
+- Data: loaded from the Room **`products` table** via `ProductDAO.getAll()`. On first run the table is empty, so `loadCatalog()` seeds it from the bundled `res/raw/products.json` ([`ProductSeed.read`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ProductSeed.kt), Gson) using `ProductDAO.insertAll(...)`. The load runs on `viewLifecycleOwner.lifecycleScope` (`withContext(Dispatchers.IO)`), then publishes to the adapter via `adapter.submit(...)` on the main thread.
 - List rendering: `RecyclerView` with `GridLayoutManager(span = 2)` and [`ProductCardRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt) inflating `res/layout/shr_product_card.xml`.
-- Images: each card's image is loaded by URL through [`ImageRequester`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/network/ImageRequester.kt) (Volley + `LruCache`). Image URLs may be stale, so images can appear blank.
+- Images: each card attempts to load its `product_url` via [`ImageRequester`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/network/ImageRequester.kt) (Volley + `LruCache`), with the `shr_logo` drawable set as the `NetworkImageView` default/error image so cards always show a branded placeholder (the seed data ships empty URLs, since no working product image host is available).
 - Toolbar: `ProductGridFragment` sets the support action bar to the included toolbar and inflates `res/menu/shr_toolbar_menu.xml` (cart icon).
+
+> Made data-driven by [plan_3_catalog](plan_3_catalog.md): the catalog was previously a hardcoded inline list with dead image URLs (B11) and `PrductDAO` queried the wrong table (B8).
 
 ---
 
@@ -123,9 +125,10 @@ All paths are relative to `Shrine/`.
 
 These exist in the source tree but are **not** part of any user-facing flow. Do not document them as capabilities:
 
-- **Staggered product grid** — `adapters/staggeredgridlayout/StaggeredProductCardRecyclerViewAdapter.kt` and `StaggeredProductCardViewHolder.kt` are never instantiated.
-- **Bundled JSON catalog** — `res/raw/products.json` and `network/ProductEntry.kt` (`initProductEntryList`) are referenced only inside commented-out code; nothing loads them at runtime.
-- **Products table/DAO** — `PrductDAO` and the Room `products` table are declared but never written to or read from in the active flow. (`PrductDAO`'s queries also target the `cart` table.)
+- **Staggered product grid** — `adapters/staggeredgridlayout/StaggeredProductCardRecyclerViewAdapter.kt` and `StaggeredProductCardViewHolder.kt` are never instantiated. _(Slated for removal in plan_5_cleanup.)_
+- **`ProductEntry` JSON loader** — `network/ProductEntry.kt` (`initProductEntryList`) is unused; it no longer matches the `products.json` schema (which is now the `Product`-shaped seed) and is never called. _(Slated for removal in plan_5_cleanup.)_
 - **Search / filter** — toolbar search/filter strings and drawables exist, but the menu items are commented out in `shr_toolbar_menu.xml`.
+
+> Note: as of plan_3_catalog, the Room `products` table, `ProductDAO`, and `res/raw/products.json` are now **active** (they back the product grid) — they are no longer dead code.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design context and [CODEBASE.md](CODEBASE.md) for the file map.
