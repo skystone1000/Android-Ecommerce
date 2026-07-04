@@ -7,14 +7,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
 import com.google.codelabs.mdc.kotlin.shrine.R
+import com.google.codelabs.mdc.kotlin.shrine.auth.PasswordHasher
 import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.User
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -23,8 +26,6 @@ import kotlinx.coroutines.launch
  * create an instance of this fragment.
  */
 class RegisterFragment : Fragment() {
-
-    lateinit var database: ShrineDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,15 +100,28 @@ class RegisterFragment : Fragment() {
         val phone = view.findViewById<TextInputEditText>(R.id.phone_edit_text).text.toString().trim()
         val organisation = view.findViewById<TextInputEditText>(R.id.organisation_edit_text).text.toString().trim()
         val password = view.findViewById<TextInputEditText>(R.id.password_edit_text).text.toString().trim()
+        val emailTextInput = view.findViewById<TextInputLayout>(R.id.email_text_input)
 
-        database = ShrineDatabase.getDatabase(requireContext())
-        GlobalScope.launch {
-            database.userDao().insertUser(User(0, name, email, phone, organisation, password))
+        viewLifecycleOwner.lifecycleScope.launch {
+            val db = ShrineDatabase.getDatabase(requireContext())
+
+            // Reject duplicate emails (the users table has a unique index on user_email).
+            val alreadyExists = withContext(Dispatchers.IO) { db.userDao().getLogin(email) != null }
+            if (alreadyExists) {
+                emailTextInput.error = getString(R.string.shr_error_email_exists)
+                return@launch
+            }
+
+            // Hash the password (salted) off the main thread before storing.
+            withContext(Dispatchers.IO) {
+                val salt = PasswordHasher.newSalt()
+                val hash = PasswordHasher.hash(password, salt)
+                db.userDao().insertUser(User(0, name, email, phone, organisation, hash, salt))
+            }
+
+            Toast.makeText(requireContext(), "User Registered - Please Login", Toast.LENGTH_SHORT).show()
+            (activity as NavigationHost).navigateTo(LoginFragment(), false)
         }
-
-        Toast.makeText(requireContext(), "User Registered - Please Login", Toast.LENGTH_SHORT).show()
-
-        (activity as NavigationHost).navigateTo(LoginFragment(), false)
     }
 
 

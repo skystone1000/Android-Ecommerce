@@ -1,9 +1,11 @@
 ---
 title: Authentication hardening (password hashing)
-status: active
+status: completed
 last_updated: 2026-06-27
 scope: Hash passwords with a salted KDF, compare hashes at login, and prevent duplicate-email registrations.
 ---
+
+> **Completed 2026-06-27.** Implemented and verified on-device. Fixes B3 and B9; completes the register portion of B6. Chose salted PBKDF2 (`PBKDF2WithHmacSHA1`, 100k iterations) for minSdk-16 compatibility, and `fallbackToDestructiveMigration()` for the v1→v2 schema change (throwaway local data). Verified: registration stores Base64 hash+salt only (no plaintext), correct login succeeds via hash compare, wrong password is rejected, and a duplicate email is rejected (user count stays 1). Destructive migration from an existing v1 DB ran without crashing.
 
 # plan_4_security — Authentication hardening
 

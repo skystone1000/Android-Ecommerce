@@ -11,6 +11,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
 import com.google.codelabs.mdc.kotlin.shrine.R
+import com.google.codelabs.mdc.kotlin.shrine.auth.PasswordHasher
 import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.User
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,6 @@ import kotlinx.coroutines.withContext
  */
 class LoginFragment : Fragment() {
 
-    lateinit var database: ShrineDatabase
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         // Inflate the layout for this fragment
@@ -68,13 +68,16 @@ class LoginFragment : Fragment() {
      */
     private fun login(email: String, password: String, passwordTextInput: TextInputLayout) {
         viewLifecycleOwner.lifecycleScope.launch {
-            val user: User? = withContext(Dispatchers.IO) {
-                database = ShrineDatabase.getDatabase(requireContext())
-                database.userDao().getLogin(email)
+            // Look up the user and verify the password hash off the main thread.
+            val result = withContext(Dispatchers.IO) {
+                val user = ShrineDatabase.getDatabase(requireContext()).userDao().getLogin(email)
+                val authenticated = user != null &&
+                        PasswordHasher.hash(password, user.user_pass_salt) == user.user_pass_hash
+                Pair(user, authenticated)
             }
 
-            // Authenticate User
-            if (user != null && user.user_pass == password) {
+            val user: User? = result.first
+            if (result.second && user != null) {
                 saveSession(user)
                 // Navigate to ProductGrid (on the main thread)
                 (activity as NavigationHost).navigateTo(ProductGridFragment(), false)

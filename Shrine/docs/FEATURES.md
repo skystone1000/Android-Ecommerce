@@ -22,10 +22,11 @@ All paths are relative to `Shrine/`.
   - All six `TextInputLayout` fields must be non-empty (else field error "Field must not be empty.").
   - Password and Confirm Password must match (else "Passwords Should Match" + toast).
   - Password must be ≥ 8 characters (string `shr_error_password`).
-- Persistence: on success, builds a `User(0, name, email, phone, organisation, password)` and inserts it via `UserDAO.insertUser` inside `GlobalScope.launch`.
+- Duplicate guard: before inserting, `userRegister()` checks `UserDAO.getLogin(email)`; if a user already exists it shows "An account with this email already exists." on the email field and aborts (the `users` table also has a unique index on `user_email`).
+- Persistence: on success (`viewLifecycleOwner.lifecycleScope`), a random salt is generated and the password is hashed with salted PBKDF2 ([`PasswordHasher`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/auth/PasswordHasher.kt)); a `User(0, name, email, phone, organisation, hash, salt)` is inserted via `UserDAO.insertUser` off the main thread.
 - Result: shows a toast "User Registered - Please Login" and navigates back to `LoginFragment`.
 
-**Note:** the password is stored in plaintext (`User.user_pass`).
+**Note:** passwords are stored as salted PBKDF2 hashes (`user_pass_hash` + `user_pass_salt`), never plaintext. See [plan_4_security](plan_4_security.md).
 
 ---
 
@@ -37,12 +38,12 @@ All paths are relative to `Shrine/`.
 - UI: [`LoginFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/LoginFragment.kt) + `res/layout/shr_login_fragment.xml`.
 - The login field is labeled **"Email"** and is matched against the user's email (`UserDAO.getLogin(email)` queries `WHERE user_email = :email`).
 - Validation before the DB call: email non-empty; password ≥ 8 chars (`isPasswordValid`).
-- Auth: `login()` runs on `viewLifecycleOwner.lifecycleScope`; the DB lookup is done in `withContext(Dispatchers.IO)`, then the result is handled on the main thread. It compares the stored `user_pass` to the entered password.
+- Auth: `login()` runs on `viewLifecycleOwner.lifecycleScope`; the DB lookup **and** password verification are done in `withContext(Dispatchers.IO)`, then the result is handled on the main thread. It recomputes the salted PBKDF2 hash of the entered password and compares it to the stored `user_pass_hash`.
 - On success: caches `user_id`, `user_name`, `user_email`, `user_phone` into per-Activity `SharedPreferences`, then navigates to `ProductGridFragment` (on the main thread).
 - On failure (wrong password or unknown email): shows the error "Incorrect email or password." (`shr_error_invalid_credentials`) on the password field; stays on the login screen.
 - Entry to Register: the "Register" button navigates to `RegisterFragment`.
 
-> Implemented by [plan_1_login](plan_1_login.md). Note: the password is still compared in plaintext — see [BUG_INVENTORY.md](BUG_INVENTORY.md) B3 (plan_4_security).
+> Implemented by [plan_1_login](plan_1_login.md); hash-based verification added by [plan_4_security](plan_4_security.md).
 
 ---
 

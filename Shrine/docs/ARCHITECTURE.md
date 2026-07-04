@@ -31,6 +31,7 @@ Shrine is a single-module Android application written in Kotlin. It originates f
 | DAOs (`database/`) | Room `@Dao` interfaces | `UserDAO`, `CartItemDAO`, `ProductDAO` — database queries. |
 | `ShrineDatabase` | Room `@Database` | Singleton database with the three DAOs. |
 | `ImageRequester` | object | Loads remote product images over HTTP via Volley, with an in-memory `LruCache`. |
+| `PasswordHasher` (`auth/`) | object | Salted PBKDF2 hashing/verification for the local account store. |
 | `NavigationIconClickListener` | `View.OnClickListener` | Animates the product-grid "backdrop" reveal when the toolbar nav icon is tapped. |
 
 ## Control flow (navigation graph)
@@ -51,7 +52,7 @@ Each hop calls `(<host> as NavigationHost).navigateTo(fragment, addToBackstack)`
 
 ## Data flow
 
-1. **Authentication.** `RegisterFragment` writes a `User` row via `UserDAO.insertUser`. `LoginFragment` reads it back with `UserDAO.getLogin(email)` and compares the stored `user_pass` to the entered password. On success it caches `user_id`, `user_name`, `user_email`, `user_phone` in `SharedPreferences`.
+1. **Authentication.** `RegisterFragment` hashes the password (salted PBKDF2 via `PasswordHasher`) and writes a `User` row (`user_pass_hash` + `user_pass_salt`) via `UserDAO.insertUser`, rejecting duplicate emails. `LoginFragment` reads the user back with `UserDAO.getLogin(email)`, recomputes the hash of the entered password, and compares it to the stored hash. On success it caches `user_id`, `user_name`, `user_email`, `user_phone` in `SharedPreferences`.
 2. **Catalog.** `ProductGridFragment` loads the catalog from the Room `products` table via `ProductDAO`, seeding it from `res/raw/products.json` (`ProductSeed`) on first run, and passes it to `ProductCardRecyclerViewAdapter`. Product images are attempted by URL through `ImageRequester`, falling back to a bundled `shr_logo` placeholder.
 3. **Cart.** Tapping a product card inserts a `CartItem` (quantity `"1"`) via `CartItemDAO.insertCartItem`. `CartFragment` loads all cart rows with `CartItemDAO.getAll()`, then **regroups duplicate `product_id`s in memory** to compute per-product quantities, and renders count + total price.
 4. **Profile/session.** `ProfileFragment` reads the cached user fields from `SharedPreferences`. Sign-out clears those preferences and restarts the Activity.
@@ -94,8 +95,8 @@ Declared in [app/build.gradle](../app/build.gradle):
 These are accurate observations of the current code, surfaced so docs match reality (do not assume they are intentional design):
 
 - ~~**Fragment transactions from background threads.**~~ _Resolved (plan_1_login + plan_2_cart): all `navigateTo(...)` calls — login, cart clear/checkout, and cart-item removal — now run on the main thread via lifecycle scopes._
-- **`GlobalScope` usage** for DB writes is not lifecycle-aware. _Remaining: `ProductCardRecyclerViewAdapter` (add-to-cart insert) and `RegisterFragment` (register insert). Login and all cart paths were migrated to lifecycle scopes in plan_1_login / plan_2_cart._
-- **Plaintext passwords.** `User.user_pass` is stored and compared in plaintext. _(Login failures are no longer silent as of plan_1_login — they show an inline error; plaintext storage/comparison itself is still open: plan_4_security.)_
+- **`GlobalScope` usage** for DB writes is not lifecycle-aware. _Remaining: only `ProductCardRecyclerViewAdapter` (add-to-cart insert). Login, register, and all cart paths were migrated to lifecycle scopes in plan_1_login / plan_2_cart / plan_4_security._
+- ~~**Plaintext passwords.**~~ _Resolved (plan_4_security): passwords are stored as salted PBKDF2 hashes (`user_pass_hash` + `user_pass_salt`) and verified by hash; duplicate emails are rejected via a unique index._
 - ~~**Hardcoded catalog.**~~ _Resolved (plan_3_catalog): the catalog is now seeded into the Room `products` table from `res/raw/products.json` and loaded via `ProductDAO`._
 - **Dead code paths.** The staggered-grid adapters (`StaggeredProductCardRecyclerViewAdapter`, `StaggeredProductCardViewHolder`) and `network/ProductEntry.kt` are defined but never reached from the active UI flow. _(Slated for plan_5_cleanup. As of plan_3_catalog the `products` table, `ProductDAO`, and `products.json` are now active.)_
 - ~~**Live image URLs may be stale.**~~ _Mitigated (plan_3_catalog): all known product image hosts return 404/000, so cards now render the bundled `shr_logo` placeholder via the `NetworkImageView` default/error image instead of appearing blank._

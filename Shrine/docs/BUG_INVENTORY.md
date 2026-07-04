@@ -14,18 +14,19 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 - 2026-06-27 — plan_1_login implemented: **B4** and **B5** fixed; **B2** and **B6** partially fixed (login paths only; cart/adapter/register paths remain).
 - 2026-06-27 — plan_2_cart implemented: **B1** and **B7** fixed; **B2** now fully fixed (all three call sites navigate on the main thread); **B6** still partial (cart + cart-adapter done; add-to-cart adapter and register remain).
 - 2026-06-27 — plan_3_catalog implemented: **B8** fixed (DAO renamed `ProductDAO`, queries the `products` table, now used); **B11** partially fixed (hardcoded catalog removed, images render a branded placeholder, `products.json` now seeds the DB; staggered adapters + `ProductEntry` remain for plan_5).
+- 2026-06-27 — plan_4_security implemented: **B3** fixed (salted PBKDF2 hashing; no plaintext stored/compared); **B9** fixed (unique `user_email` index + pre-insert guard); **B6** advanced (register now lifecycle-scoped — only the add-to-cart adapter still uses `GlobalScope`). DB schema bumped to v2 (destructive migration).
 
 | # | Severity | Bug | Location | Fix in | Status |
 |---|----------|-----|----------|--------|--------|
 | B1 | High | Cart never shows real items | `fragments/CartFragment.kt:51`, `:26`, `:61/:78/:81` | plan_2_cart | ✅ Fixed (plan_2_cart) |
 | B2 | High | Fragment navigation on background threads | `fragments/LoginFragment.kt:46→:84`; `fragments/CartFragment.kt:102→:104`, `:110→:112`; `adapters/lineargridlayout/CartRecyclerViewAdapter.kt:44→:46` | plan_1_login, plan_2_cart | ✅ Fixed (plan_1_login + plan_2_cart) |
-| B3 | High | Passwords stored/compared in plaintext | `models/User.kt:14`; `fragments/RegisterFragment.kt:104`; `fragments/LoginFragment.kt:72` | plan_4_security | ⬜ Open |
+| B3 | High | Passwords stored/compared in plaintext | `models/User.kt:14`; `fragments/RegisterFragment.kt:104`; `fragments/LoginFragment.kt:72` | plan_4_security | ✅ Fixed (plan_4_security) |
 | B4 | Medium | Login silently fails (no error feedback) | `fragments/LoginFragment.kt:72` (else branch commented) | plan_1_login | ✅ Fixed (plan_1_login) |
 | B5 | Medium | "Username" field actually requires the email | `fragments/LoginFragment.kt` + `res/layout/shr_login_fragment.xml`; query at `database/UserDAO.kt:13` | plan_1_login | ✅ Fixed (plan_1_login) |
-| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `fragments/RegisterFragment.kt:104`; `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt:46` (add-to-cart) | plan_1_login, plan_2_cart, plan_4_security | 🟡 Partial — login + cart + cart-adapter fixed; add-to-cart adapter & register remain |
+| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt` (add-to-cart insert) | plan_1_login, plan_2_cart, plan_4_security | 🟡 Partial — only the add-to-cart adapter insert remains |
 | B7 | Medium | `NumberFormatException` risk in cart totals | `fragments/CartFragment.kt:92` (`product_price.toInt()`, `product_quantity.toInt()`) | plan_2_cart | ✅ Fixed (plan_2_cart) |
 | B8 | Low* | `PrductDAO` queries the wrong table | `database/PrductDAO.kt:17` (`SELECT * FROM cart`), `:20` (`DELETE FROM cart`) | plan_3_catalog | ✅ Fixed (plan_3_catalog) |
-| B9 | Medium | No duplicate-email guard at registration | `database/UserDAO.kt` (no uniqueness); `fragments/RegisterFragment.kt:104` | plan_4_security | ⬜ Open |
+| B9 | Medium | No duplicate-email guard at registration | `database/UserDAO.kt` (no uniqueness); `fragments/RegisterFragment.kt:104` | plan_4_security | ✅ Fixed (plan_4_security) |
 | B10 | Low | Deprecated `defaultDisplay.getMetrics` | `NavigationIconClickListener.kt:27` | plan_5_cleanup | ⬜ Open |
 | B11 | Low | Dead code + stale image URLs | `adapters/staggeredgridlayout/*`, `network/ProductEntry.kt`, `res/raw/products.json`; hardcoded list in `fragments/ProductGridFragment.kt` | plan_3_catalog, plan_5_cleanup | 🟡 Partial — catalog/images fixed; staggered adapters + `ProductEntry` remain |
 | B12 | Low | Misplaced `@RequiresApi` on an `if` statement | `fragments/OrderPlacedFragment.kt:45` | plan_5_cleanup | ⬜ Open |
@@ -48,8 +49,10 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 > **2026-06-27 (plan_1_login):** login fixed — DB lookup in `withContext(Dispatchers.IO)` inside `viewLifecycleOwner.lifecycleScope.launch`, navigation on the main thread.
 > **2026-06-27 (plan_2_cart):** the remaining two sites are fixed — cart clear/checkout use `viewLifecycleOwner.lifecycleScope` (DB delete off-main, navigate on main); `CartRecyclerViewAdapter` removal uses `(context as AppCompatActivity).lifecycleScope` the same way. All `navigateTo` calls now run on the main thread. Verified on-device (remove, clear, checkout all navigate correctly with no crash).
 
-### B3 — Plaintext passwords (High, security)
-`User.user_pass` holds the raw password; registration inserts it as-is (`RegisterFragment.kt:104`) and login compares raw strings (`LoginFragment.kt:72`). Anyone with DB access (rooted device, backup) reads credentials. Fix: hash with a salted KDF before storage; compare hashes.
+### B3 — Plaintext passwords (High, security) — ✅ Fixed (plan_4_security)
+`User.user_pass` held the raw password; registration inserted it as-is and login compared raw strings. Anyone with DB access (rooted device, backup) could read credentials.
+
+> **2026-06-27 (plan_4_security):** `User` now stores `user_pass_hash` + `user_pass_salt` (no plaintext column). Registration hashes with salted PBKDF2 ([`auth/PasswordHasher`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/auth/PasswordHasher.kt), `PBKDF2WithHmacSHA1`, 100k iterations, random 16-byte salt); login recomputes the hash and compares. Verified on-device: the `users` row holds Base64 hash+salt only (e.g. `user_pass_hash=pqD/NU…`), no plaintext. This is on-device hardening for a local demo, not server-side auth.
 
 ### B4 — Silent login failure (Medium) — ✅ Fixed (plan_1_login)
 On a wrong email/password, the old `userLogin()` did nothing — the `else` branch was commented out. The user got no toast, no error, no state change.
@@ -65,7 +68,8 @@ The login layout hint said "Username", but the auth path calls `UserDAO.getLogin
 DB writes/reads for register, login, add-to-cart, remove-item, clear, and checkout ran on `GlobalScope` / ad-hoc `CoroutineScope(Dispatchers.IO)`, which ignore fragment/view lifecycle. Coroutines can outlive the view and touch destroyed UI, and uncaught exceptions crash the process. Fix: use `viewLifecycleOwner.lifecycleScope` (fragments) / a scoped approach for adapters.
 
 > **2026-06-27 (plan_1_login):** login now uses `viewLifecycleOwner.lifecycleScope`.
-> **2026-06-27 (plan_2_cart):** `CartFragment` (load/clear/checkout) and `CartRecyclerViewAdapter` (remove) now use lifecycle scopes instead of `GlobalScope`. Still open: `ProductCardRecyclerViewAdapter.kt:46` (add-to-cart insert) and `RegisterFragment.kt:104` (register insert) — to be addressed with plan_4_security / a future add-to-cart cleanup.
+> **2026-06-27 (plan_2_cart):** `CartFragment` (load/clear/checkout) and `CartRecyclerViewAdapter` (remove) now use lifecycle scopes instead of `GlobalScope`.
+> **2026-06-27 (plan_4_security):** `RegisterFragment` register insert migrated to `viewLifecycleOwner.lifecycleScope`. Only `ProductCardRecyclerViewAdapter` (the add-to-cart insert) still uses `GlobalScope` — it has no view lifecycle of its own; a future small cleanup can scope it to the host activity.
 
 ### B7 — Cart total parsing can crash (Medium) — ✅ Fixed (plan_2_cart)
 `CartFragment` did `cartItem.product_price.toInt() * cartItem.product_quantity.toInt()` on free-form `String`s; any price containing `$`, decimals, or commas would throw `NumberFormatException` and crash the cart.
@@ -77,8 +81,10 @@ DB writes/reads for register, login, add-to-cart, remove-item, clear, and checko
 
 > **2026-06-27 (plan_3_catalog):** renamed `PrductDAO` → `ProductDAO` (file `database/ProductDAO.kt`); replaced the bogus queries with `getAll()`/`count()` on the `products` table and an `insertAll(...)`. It is now the catalog's data source (used by `ProductGridFragment`).
 
-### B9 — Duplicate registrations (Medium)
-Nothing prevents two `User` rows with the same `user_email`. `getLogin` returns a single row, so behavior with duplicates is undefined. Fix: unique index on `user_email` + pre-insert existence check with a clear error.
+### B9 — Duplicate registrations (Medium) — ✅ Fixed (plan_4_security)
+Nothing prevented two `User` rows with the same `user_email`; `getLogin` returns a single row, so behavior with duplicates was undefined.
+
+> **2026-06-27 (plan_4_security):** added a unique index on `user_email` (`@Entity(indices=[Index(value=["user_email"], unique=true)])`) and a pre-insert check (`getLogin(email) != null`) that shows "An account with this email already exists." on the email field and aborts. Verified on-device: re-registering `bob@x.com` is rejected and the user count stays at 1.
 
 ### B10–B13 — Low
 - **B10**: `Activity.windowManager.defaultDisplay.getMetrics()` is deprecated (API 30+); use `WindowMetrics`/`Resources.displayMetrics`.

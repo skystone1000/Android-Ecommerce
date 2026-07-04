@@ -6,6 +6,7 @@
     <string name="shr_button_register">Register</string>
     <string name="shr_error_password">Password must contain at least 8 characters.</string>
     <string name="shr_error_invalid_credentials">Incorrect email or password.</string>
+    <string name="shr_error_email_exists">An account with this email already exists.</string>
     <string name="shr_filter_title">Filter</string>
     <string name="shr_search_title">Search</string>
     <string name="shr_product_title">Title</string>
