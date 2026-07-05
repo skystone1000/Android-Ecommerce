@@ -37,4 +37,12 @@
     <string name="shr_settings_staggered_label">Staggered product grid</string>
     <string name="shr_settings_staggered_description">Show products in a horizontally-scrolling, two-row staggered carousel instead of a regular grid.</string>
     <string name="error_string">Field must not be empty.</string>
+    <string name="shr_error_email_empty">Email should not be empty.</string>
+    <string name="shr_error_invalid_email">Enter a valid email address.</string>
+    <string name="shr_error_passwords_match">Passwords should match.</string>
+    <string name="shr_added_to_cart">Item: %1$s added to cart</string>
+    <string name="shr_removed_from_cart">Item: %1$s removed from the cart</string>
+    <string name="shr_cart_empty">Your cart is empty.</string>
+    <!-- Currency formatting: amount followed by the currency symbol. -->
+    <string name="shr_price_format">%1$s $</string>
 </resources>

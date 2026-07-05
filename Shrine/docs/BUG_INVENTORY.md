@@ -1,6 +1,6 @@
 ---
 title: Bug Inventory
-last_updated: 2026-06-27
+last_updated: 2026-06-28
 scope: Prioritized, verified defects in the Shrine app with file/line references and rationale. Source for the plan_* fix sequence.
 ---
 
@@ -16,7 +16,9 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 - 2026-06-27 — plan_3_catalog implemented: **B8** fixed (DAO renamed `ProductDAO`, queries the `products` table, now used); **B11** partially fixed (hardcoded catalog removed, images render a branded placeholder, `products.json` now seeds the DB; staggered adapters + `ProductEntry` remain for plan_5).
 - 2026-06-27 — plan_4_security implemented: **B3** fixed (salted PBKDF2 hashing; no plaintext stored/compared); **B9** fixed (unique `user_email` index + pre-insert guard); **B6** advanced (register now lifecycle-scoped — only the add-to-cart adapter still uses `GlobalScope`). DB schema bumped to v2 (destructive migration).
 - 2026-06-27 — plan_5_cleanup implemented: **B10**, **B12**, **B13** fixed; **B11** resolved with a scope change — instead of deleting the staggered grid it was **repurposed into a feature** (Settings screen with a grid-layout toggle, see plan_6_settings). `ProductEntry` is the sole remaining unused class, intentionally retained.
-- 2026-06-27 — remaining items closed: **B6** fully fixed (`ProductCardRecyclerViewAdapter` add-to-cart now uses the host activity's `lifecycleScope` instead of `GlobalScope` — **no `GlobalScope` remains anywhere**); **B11** fully resolved (the unused `network/ProductEntry.kt` was removed). **All inventory items are now ✅.**
+- 2026-06-27 — remaining items closed: **B6** fully fixed (`ProductCardRecyclerViewAdapter` add-to-cart now uses the host activity's `lifecycleScope` instead of `GlobalScope` — **no `GlobalScope` remains anywhere**); **B11** fully resolved (the unused `network/ProductEntry.kt` was removed). **B1–B13 are all ✅.**
+- 2026-06-27 — [plan_7_appwide](plan_7_appwide.md) re-reviewed the whole app and opened **B14–B24** (see second table below). **B14** (product grid empty after returning from cart) fixed same session in `ProductGridFragment.onDestroyView`.
+- 2026-06-28 — plan_7_appwide implemented and verified on emulator: **B14–B23 all ✅**; **B24** left as noted. (The separate `audit_1_appwide` doc was folded into `plan_7_appwide` and removed.)
 
 | # | Severity | Bug | Location | Fix in | Status |
 |---|----------|-----|----------|--------|--------|
@@ -35,6 +37,22 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 | B13 | Low | `targetSdk 33` lags `compileSdk 34` | `app/build.gradle:7,11` | plan_5_cleanup | ✅ Fixed (plan_5_cleanup) |
 
 \* B8 is Low **today** because the DAO is dead code, but it is a latent High if ever wired up.
+
+### Second pass — plan_7_appwide (B14–B24)
+
+| # | Severity | Bug | Location | Fix in | Status |
+|---|----------|-----|----------|--------|--------|
+| B14 | High | Product grid empty after returning from Cart/Settings (stale `staggeredMode` cache) | `fragments/ProductGridFragment.kt:73` | plan_7_appwide | ✅ Fixed (this session — `onDestroyView` resets cache) |
+| B15 | High | Cart is global, not scoped to the logged-in user (no `user_id`; not cleared on login/logout) | `models/CartItem.kt`, `database/CartItemDAO.kt`, `fragments/LoginFragment.kt`, `fragments/ProfileFragment.kt` | plan_7_appwide (Step 7) | ✅ Fixed — `cart.user_id` + all queries scoped by user (no clear-on-logout needed; carts persist per user) |
+| B16 | Medium | Broken double-checked locking in DB singleton (no re-check inside `synchronized`) | `database/ShrineDatabase.kt:21-36` | plan_7_appwide (Step 1) | ✅ Fixed |
+| B17 | Medium | Password trim mismatch — register trims, login doesn't (locks out whitespace passwords) | `fragments/RegisterFragment.kt:102` vs `fragments/LoginFragment.kt:40` | plan_7_appwide (Step 3) | ✅ Fixed — register no longer trims the password |
+| B18 | Medium | `allowBackup="true"` exposes the credential DB + session prefs to `adb backup`/cloud | `app/src/main/AndroidManifest.xml:8` | plan_7_appwide (Step 2) | ✅ Fixed — `allowBackup="false"` |
+| B19 | Medium | Decimal/`$`-prefixed prices parse to 0 in cart totals (`toIntOrNull`) | `fragments/CartFragment.kt:110` | plan_7_appwide (Step 4) | ✅ Fixed — totals parse as `Double` |
+| B20 | Low | Inefficient cart: tap inserts a new row; remove deletes all rows + recreates the whole fragment; no real quantity column | `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt:62`, `adapters/lineargridlayout/CartRecyclerViewAdapter.kt:57` | plan_7_appwide (Step 8) | ✅ Fixed — one row/product with a real quantity (upsert), single-row delete, in-place reload + DiffUtil |
+| B21 | Low | No email-format validation (login/register only check non-empty) | `fragments/LoginFragment.kt:41`, `fragments/RegisterFragment.kt:79` | plan_7_appwide (Step 5) | ✅ Fixed — `Patterns.EMAIL_ADDRESS` |
+| B22 | Low | Hardcoded user-facing strings + ad-hoc currency formatting bypass `strings.xml` | `fragments/LoginFragment.kt:42`, `fragments/RegisterFragment.kt:56`, adapters | plan_7_appwide (Step 5) | ✅ Fixed — moved to `strings.xml` |
+| B23 | Low | No empty/loading/error states; checkout allowed on an empty cart | `fragments/CartFragment.kt:62` | plan_7_appwide (Step 6) | ✅ Fixed — checkout/clear disabled when cart empty (full loading/error states remain in FEATURE_BACKLOG) |
+| B24 | Low | PBKDF2-HMAC-**SHA1** is the weakest acceptable KDF (minSdk 16 constraint) | `auth/PasswordHasher.kt:17` | — | ⬜ Noted (revisit on minSdk bump) |
 
 ---
 

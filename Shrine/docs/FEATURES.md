@@ -1,6 +1,6 @@
 ---
 title: Features
-last_updated: 2026-06-27
+last_updated: 2026-06-28
 scope: Every user-facing feature, what it does, and the end-to-end modules that implement it.
 ---
 
@@ -77,8 +77,10 @@ All paths are relative to `Shrine/`.
 **What it does:** Tapping a product card adds that product to the cart.
 
 **End to end:**
-- `ProductCardRecyclerViewAdapter.onBindViewHolder` (and the staggered adapter): the card's `onClickListener` inserts a `CartItem(0, product_id, name, price, url, "1")` via `CartItemDAO.insertCartItem` off the main thread on the host activity's `lifecycleScope`, and shows a toast "Item: <name> Added to cart".
-- Each tap inserts a new cart row (quantities are aggregated later in the cart screen, not merged on insert).
+- `ProductCardRecyclerViewAdapter.onBindViewHolder` (and the staggered adapter): the card's `onClickListener` calls `CartItemDAO.addOrIncrement(userId, product)` ([`database/CartOps.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/CartOps.kt)) off the main thread on the host activity's `lifecycleScope`, and shows a toast "Item: <name> added to cart".
+- The cart keeps **one row per product per user**: the first tap inserts a `CartItem(0, userId, …, "1")`; subsequent taps increment that row's `product_quantity` instead of inserting a duplicate. `userId` comes from the session via [`auth/Session`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/auth/Session.kt).
+
+> Per-user scoping + quantity upsert added by [plan_7_appwide](plan_7_appwide.md) (B15, B20).
 
 ---
 
@@ -88,14 +90,15 @@ All paths are relative to `Shrine/`.
 
 **End to end:**
 - UI: [`CartFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/CartFragment.kt) + `res/layout/shr_cart_fragment.xml`; rows via [`CartRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/lineargridlayout/CartRecyclerViewAdapter.kt) + `res/layout/shr_cart_item.xml`.
-- Load + regroup: `loadCart()` runs on `viewLifecycleOwner.lifecycleScope`; it reads all rows with `CartItemDAO.getAll()` in `withContext(Dispatchers.IO)`, then `regroupByProduct()` collapses duplicate `product_id`s into one entry whose quantity is the row count. The result is pushed to the adapter via `adapter.submit(list)` (which calls `notifyDataSetChanged()`) on the main thread.
-- Totals: computed in `updateTotals()` right after the list loads (not in `onResume`): `count = items.size` (distinct product lines); `total = Σ(price × quantity)` with defensive parsing (`removePrefix("$").trim().toIntOrNull() ?: 0`). Rendered into `cart_items_total_value` / `cart_items_price_value`.
-- Remove one item: a row's delete icon calls `CartItemDAO.deleteCartItem(product_id)` off-main, then re-opens `CartFragment` on the main thread (toast "… Removed from the cart"). Note: this removes *all* rows for that product.
-- Clear cart: `cart_clear_icon` calls `CartItemDAO.clearCart()` off-main, then reloads `CartFragment` on the main thread.
-- Checkout: `cart_checkout` calls `CartItemDAO.clearCart()` off-main, then navigates to `OrderPlacedFragment` on the main thread.
+- Load: `loadCart()` runs on `viewLifecycleOwner.lifecycleScope`; it reads the **current user's** rows with `CartItemDAO.getAll(userId)` in `withContext(Dispatchers.IO)` (already one row per product with a real `product_quantity` — no in-memory regrouping), then pushes them to the adapter via `adapter.submit(list)` (which diffs with `DiffUtil`) on the main thread.
+- Totals: computed in `updateTotals()` right after the list loads: `count = items.size` (distinct product lines); `total = Σ(price × quantity)` with currency-safe parsing (`removePrefix("$").trim().toDoubleOrNull() ?: 0.0`, formatted via `shr_price_format`). Rendered into `cart_items_total_value` / `cart_items_price_value`.
+- Empty-cart guard: when the cart is empty, the **checkout and clear controls are disabled** so an empty "order" can't be placed.
+- Remove one item: a row's delete icon calls `CartItemDAO.deleteCartItem(product_id, userId)` off-main, then **reloads the cart in place** via a callback (no full-fragment recreation; toast "… removed from the cart").
+- Clear cart: `cart_clear_icon` calls `CartItemDAO.clearCart(userId)` off-main, then reloads in place.
+- Checkout: `cart_checkout` calls `CartItemDAO.clearCart(userId)` off-main, then navigates to `OrderPlacedFragment` on the main thread.
 - Navigation in: the toolbar cart icon on the product grid → `MainActivity.onOptionsItemSelected` (`R.id.cart_icon`) → `gotoCart()` → `CartFragment`.
 
-> Corrected by [plan_2_cart](plan_2_cart.md): the cart previously showed only a hardcoded placeholder row (B1). It now displays the real cart contents, and all cart DB work/navigation is lifecycle-scoped and main-thread-safe.
+> Corrected by [plan_2_cart](plan_2_cart.md): the cart previously showed only a hardcoded placeholder row (B1). [plan_7_appwide](plan_7_appwide.md) then scoped it per-user (B15), gave it a real quantity column with in-place updates (B20), made totals currency-safe (B19), and added the empty-cart guard (B23).
 
 ---
 

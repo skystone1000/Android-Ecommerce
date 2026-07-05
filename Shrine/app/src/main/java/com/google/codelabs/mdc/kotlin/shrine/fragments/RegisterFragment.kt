@@ -44,17 +44,25 @@ class RegisterFragment : Fragment() {
             val passwordEditText = view.findViewById<TextInputEditText>(R.id.password_edit_text)
             val confirmPasswordEditText = view.findViewById<TextInputEditText>(R.id.confirm_password_edit_text)
 
+            val emailTextInput = view.findViewById<TextInputLayout>(R.id.email_text_input)
+
             var noErrors = 0
             noErrors += check(view.findViewById(R.id.name_text_input))
-            noErrors += check(view.findViewById(R.id.email_text_input))
+            noErrors += check(emailTextInput)
             noErrors += check(view.findViewById(R.id.phone_text_input))
             noErrors += check(view.findViewById(R.id.organisation_text_input))
             noErrors += check(passwordTextInput)
             noErrors += check(view.findViewById(R.id.confirm_password_text_input))
 
+            val email = emailTextInput.editText!!.text.toString().trim()
+            if (email.isNotEmpty() && !isValidEmail(email)) {
+                emailTextInput.error = getString(R.string.shr_error_invalid_email)
+                noErrors += 1
+            }
+
             if (passwordEditText.text.toString() != confirmPasswordEditText.text.toString()) {
-                passwordTextInput.error = "Passwords Should Match"
-                Toast.makeText(requireContext(), "Passwords Should Match", Toast.LENGTH_SHORT).show()
+                passwordTextInput.error = getString(R.string.shr_error_passwords_match)
+                Toast.makeText(requireContext(), getString(R.string.shr_error_passwords_match), Toast.LENGTH_SHORT).show()
                 noErrors += 1
             }
 
@@ -93,13 +101,19 @@ class RegisterFragment : Fragment() {
         return text != null && text.length >= 8
     }
 
+    private fun isValidEmail(text: String): Boolean {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
+    }
+
     private fun userRegister() {
         val view = requireView()
         val name = view.findViewById<TextInputEditText>(R.id.name_edit_text).text.toString().trim()
         val email = view.findViewById<TextInputEditText>(R.id.email_edit_text).text.toString().trim()
         val phone = view.findViewById<TextInputEditText>(R.id.phone_edit_text).text.toString().trim()
         val organisation = view.findViewById<TextInputEditText>(R.id.organisation_edit_text).text.toString().trim()
-        val password = view.findViewById<TextInputEditText>(R.id.password_edit_text).text.toString().trim()
+        // Do NOT trim the password: login hashes the raw entered string, so trimming here would
+        // silently alter the credential and lock out passwords with leading/trailing spaces.
+        val password = view.findViewById<TextInputEditText>(R.id.password_edit_text).text.toString()
         val emailTextInput = view.findViewById<TextInputLayout>(R.id.email_text_input)
 
         viewLifecycleOwner.lifecycleScope.launch {

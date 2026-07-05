@@ -127,4 +127,13 @@ class ProductGridFragment : Fragment() {
             (activity as NavigationHost).navigateTo(ProfileFragment(), true)
         }
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // The cached layout mode describes the RecyclerView in the *current* view. When the view
+        // is destroyed (e.g. navigating to the cart/settings), the next onCreateView builds a fresh
+        // RecyclerView with no adapter, so invalidate the cache to force renderGrid() to reconfigure
+        // and reload the catalog on return — otherwise the product list comes back empty.
+        staggeredMode = null
+    }
 }

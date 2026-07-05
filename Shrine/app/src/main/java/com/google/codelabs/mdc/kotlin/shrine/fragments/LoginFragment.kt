@@ -39,7 +39,9 @@ class LoginFragment : Fragment() {
             val email = userEditText.text.toString()
             val password = passwordEditText.text.toString()
             if (email.isEmpty()) {
-                userTextInput.error = "Email should not be Empty"
+                userTextInput.error = getString(R.string.shr_error_email_empty)
+            } else if (!isValidEmail(email)) {
+                userTextInput.error = getString(R.string.shr_error_invalid_email)
             } else if (!isPasswordValid(password)) {
                 userTextInput.error = null
                 passwordTextInput.error = getString(R.string.shr_error_password)
@@ -59,6 +61,10 @@ class LoginFragment : Fragment() {
 
     private fun isPasswordValid(text: String): Boolean {
         return text.length >= 8
+    }
+
+    private fun isValidEmail(text: String): Boolean {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()
     }
 
     /**

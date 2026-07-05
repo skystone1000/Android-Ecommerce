@@ -1,6 +1,6 @@
 ---
 title: Architecture
-last_updated: 2026-06-27
+last_updated: 2026-06-28
 scope: System design, components, data/control flow, dependencies, and key design decisions for the Shrine Android app.
 ---
 
@@ -15,7 +15,7 @@ Shrine is a single-module Android application written in Kotlin. It originates f
 - **One Gradle module:** `:app` (see [settings.gradle](../settings.gradle)).
 - **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity`. All screens are `Fragment`s swapped into a single `FrameLayout` container (`R.id.container`, defined in [shr_main_activity.xml](../app/src/main/res/layout/shr_main_activity.xml)).
 - **Manual navigation:** there is no Jetpack Navigation component. Navigation is performed through the [`NavigationHost`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationHost.kt) interface, which `MainActivity` implements via `supportFragmentManager` transactions.
-- **Local persistence:** a Room database named `contactDB` ([`ShrineDatabase`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ShrineDatabase.kt)) stores users and cart items.
+- **Local persistence:** a Room database named `contactDB` (version 3, [`ShrineDatabase`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ShrineDatabase.kt)) stores users, products, and per-user cart items.
 - **Session state:** the logged-in user's details are cached in `SharedPreferences` (per-Activity `getPreferences(MODE_PRIVATE)`), not in the database.
 
 ## Major components
@@ -55,7 +55,7 @@ Each hop calls `(<host> as NavigationHost).navigateTo(fragment, addToBackstack)`
 
 1. **Authentication.** `RegisterFragment` hashes the password (salted PBKDF2 via `PasswordHasher`) and writes a `User` row (`user_pass_hash` + `user_pass_salt`) via `UserDAO.insertUser`, rejecting duplicate emails. `LoginFragment` reads the user back with `UserDAO.getLogin(email)`, recomputes the hash of the entered password, and compares it to the stored hash. On success it caches `user_id`, `user_name`, `user_email`, `user_phone` in `SharedPreferences`.
 2. **Catalog.** `ProductGridFragment` loads the catalog from the Room `products` table via `ProductDAO`, seeding it from `res/raw/products.json` (`ProductSeed`) on first run, and passes it to `ProductCardRecyclerViewAdapter`. Product images are attempted by URL through `ImageRequester`, falling back to a bundled `shr_logo` placeholder.
-3. **Cart.** Tapping a product card inserts a `CartItem` (quantity `"1"`) via `CartItemDAO.insertCartItem`. `CartFragment` loads all cart rows with `CartItemDAO.getAll()`, then **regroups duplicate `product_id`s in memory** to compute per-product quantities, and renders count + total price.
+3. **Cart.** The cart is **scoped to the logged-in user** (`cart.user_id`, read from the session via `auth/Session`). Tapping a product card calls `CartItemDAO.addOrIncrement(userId, product)`: the first tap inserts a `CartItem` (quantity `"1"`), later taps increment that product's `product_quantity` — so the table holds **one row per product per user**. `CartFragment` loads the current user's rows with `CartItemDAO.getAll(userId)` and renders count + total price (currency-safe parsing); remove/clear/checkout are also user-scoped.
 4. **Profile/session.** `ProfileFragment` reads the cached user fields from `SharedPreferences`. Sign-out clears those preferences and restarts the Activity.
 
 ## External dependencies & integrations

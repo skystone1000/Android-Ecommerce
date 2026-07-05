@@ -1,6 +1,6 @@
 ---
 title: Codebase Map
-last_updated: 2026-06-27
+last_updated: 2026-06-28
 scope: Directory tree, module responsibilities, entry points, build/run commands, conventions, and "where to look" recipes.
 ---
 
@@ -65,12 +65,12 @@ Shrine/
 
 ### `database/`, `models/`, `adapters/`, `network/`
 
-- **`models/`**: `User` (`users` table; stores `user_pass_hash` + `user_pass_salt`, with a unique index on `user_email`), `CartItem` (`cart` table), `Product` (`products` table). All are Room `@Entity` data classes with an auto-generated primary key.
-- **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, **version 2**, `fallbackToDestructiveMigration`). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/getAll/clearCart/deleteCartItem), `ProductDAO` (insertAll/getAll/count — backs the product grid), and `ProductSeed` (parses `res/raw/products.json` to seed the `products` table on first run).
+- **`models/`**: `User` (`users` table; stores `user_pass_hash` + `user_pass_salt`, with a unique index on `user_email`), `CartItem` (`cart` table; carries `user_id` so the cart is per-user, plus a real `product_quantity`), `Product` (`products` table). All are Room `@Entity` data classes with an auto-generated primary key.
+- **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, **version 3**, `fallbackToDestructiveMigration`). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/findItem/getAll/clearCart/deleteCartItem — all cart queries scoped by `user_id`), `CartOps.addOrIncrement` (upsert that increments quantity), `ProductDAO` (insertAll/getAll/count — backs the product grid), and `ProductSeed` (parses `res/raw/products.json` to seed the `products` table on first run).
 - **`adapters/lineargridlayout/`**: `ProductCardRecyclerViewAdapter` (grid of products → tap adds to cart) and `CartRecyclerViewAdapter` (cart rows → tap remove deletes item). **Active.**
 - **`adapters/staggeredgridlayout/`**: `StaggeredProductCardRecyclerViewAdapter` + `StaggeredProductCardViewHolder`. **Active** — used by `ProductGridFragment` when the "Staggered product grid" setting is on (asymmetric layout, `Product`-backed, with add-to-cart).
 - **`network/`**: `ImageRequester` (Volley image loading; **active**, used by the adapters).
-- **`auth/`**: `PasswordHasher` (salted PBKDF2 hashing/verification for login + registration).
+- **`auth/`**: `PasswordHasher` (salted PBKDF2 hashing/verification for login + registration) and `Session` (reads the logged-in `user_id` from session prefs to scope the cart).
 
 ## Entry points
 

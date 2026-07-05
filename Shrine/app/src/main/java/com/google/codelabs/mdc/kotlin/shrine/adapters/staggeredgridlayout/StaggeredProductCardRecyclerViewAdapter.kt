@@ -10,8 +10,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 
 import com.google.codelabs.mdc.kotlin.shrine.R
+import com.google.codelabs.mdc.kotlin.shrine.auth.Session
 import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
-import com.google.codelabs.mdc.kotlin.shrine.models.CartItem
+import com.google.codelabs.mdc.kotlin.shrine.database.addOrIncrement
 import com.google.codelabs.mdc.kotlin.shrine.models.Product
 import com.google.codelabs.mdc.kotlin.shrine.network.ImageRequester
 import kotlinx.coroutines.Dispatchers
@@ -64,13 +65,13 @@ class StaggeredProductCardRecyclerViewAdapter internal constructor(
             val pos = holder.adapterPosition
             if (pos == RecyclerView.NO_POSITION || pos >= productList.size) return@setOnClickListener
             val product = productList[pos]
-            Toast.makeText(context, "Item: " + product.product_name + " Added to cart", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.shr_added_to_cart, product.product_name), Toast.LENGTH_SHORT).show()
+            val activity = context as AppCompatActivity
+            val userId = Session.currentUserId(activity)
             val database = ShrineDatabase.getDatabase(context)
-            (context as AppCompatActivity).lifecycleScope.launch {
+            activity.lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
-                    database.cartItemDao().insertCartItem(
-                        CartItem(0, product.product_id, product.product_name, product.product_price, product.product_url, "1")
-                    )
+                    database.cartItemDao().addOrIncrement(userId, product)
                 }
             }
         }
