@@ -1,9 +1,11 @@
 ---
 title: Dead-code removal and deprecation cleanup
-status: active
+status: completed
 last_updated: 2026-06-27
 scope: Remove confirmed dead code, fix deprecated API usage, correct minor build/annotation issues, and align docs with the cleaned tree.
 ---
+
+> **Completed 2026-06-27, with a scope change.** Fixes B10, B12, B13 and removes the dead commented `search` menu item. **Per a decision during execution, the staggered grid was NOT deleted** — instead it was repurposed into a feature (see [plan_6_settings](plan_6_settings.md)). `ProductEntry` was the only remaining unused class (later removed in a follow-up — see BUG_INVENTORY B11). Verified on-device: backdrop reveal still works (B10), order-placed animation unaffected (B12), and the app runs end-to-end on `targetSdk 34` (B13).
 
 # plan_5_cleanup — Dead-code removal and deprecation cleanup
 

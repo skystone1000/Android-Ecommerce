@@ -77,7 +77,7 @@ All paths are relative to `Shrine/`.
 **What it does:** Tapping a product card adds that product to the cart.
 
 **End to end:**
-- `ProductCardRecyclerViewAdapter.onBindViewHolder`: the card's `onClickListener` inserts a `CartItem(0, product_id, name, price, url, "1")` via `CartItemDAO.insertCartItem` (`GlobalScope.launch`) and shows a toast "Item: <name> Added to cart".
+- `ProductCardRecyclerViewAdapter.onBindViewHolder` (and the staggered adapter): the card's `onClickListener` inserts a `CartItem(0, product_id, name, price, url, "1")` via `CartItemDAO.insertCartItem` off the main thread on the host activity's `lifecycleScope`, and shows a toast "Item: <name> Added to cart".
 - Each tap inserts a new cart row (quantities are aggregated later in the cart screen, not merged on insert).
 
 ---
@@ -122,14 +122,26 @@ All paths are relative to `Shrine/`.
 
 ---
 
+## 9. Settings — product grid layout
+
+**What it does:** Lets the user switch the product grid between the regular vertical grid and a **horizontally-scrolling, two-row staggered carousel**.
+
+**End to end:**
+- UI: [`SettingsFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/SettingsFragment.kt) + `res/layout/shr_settings_fragment.xml` (a `SwitchMaterial`).
+- Entry point: the gear icon in the product-grid toolbar (`R.id.settings_icon` in `shr_toolbar_menu.xml`) → `MainActivity.onOptionsItemSelected` → `navigateTo(SettingsFragment(), true)`.
+- Persistence: the toggle is stored in a named `SharedPreferences` file `shrine_settings` (key `staggered_grid`), so it survives sign-out (which only clears the per-Activity session prefs).
+- Effect: [`ProductGridFragment.renderGrid()`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/ProductGridFragment.kt) (called from `onResume`) reads the preference and configures either a vertical `GridLayoutManager(2)` + `ProductCardRecyclerViewAdapter`, or a **horizontal** `StaggeredGridLayoutManager(2, HORIZONTAL)` + [`StaggeredProductCardRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/staggeredgridlayout/StaggeredProductCardRecyclerViewAdapter.kt). For the staggered mode the RecyclerView height is bounded (`shr_staggered_recycler_height`) so it scrolls horizontally as a 2-row carousel; the `shr_staggered_product_card_{first,second,third}` layouts give cards varied widths for the staggered effect. Add-to-cart works identically in both layouts.
+
+> Added by [plan_6_settings](plan_6_settings.md), which repurposed the previously-dead staggered-grid adapter.
+
+---
+
 ## Not features (defined but unreachable)
 
 These exist in the source tree but are **not** part of any user-facing flow. Do not document them as capabilities:
 
-- **Staggered product grid** — `adapters/staggeredgridlayout/StaggeredProductCardRecyclerViewAdapter.kt` and `StaggeredProductCardViewHolder.kt` are never instantiated. _(Slated for removal in plan_5_cleanup.)_
-- **`ProductEntry` JSON loader** — `network/ProductEntry.kt` (`initProductEntryList`) is unused; it no longer matches the `products.json` schema (which is now the `Product`-shaped seed) and is never called. _(Slated for removal in plan_5_cleanup.)_
-- **Search / filter** — toolbar search/filter strings and drawables exist, but the menu items are commented out in `shr_toolbar_menu.xml`.
+- **Search / filter** — `shr_search`/`shr_filter` drawables and strings exist, but there is no toolbar menu item or handler for them.
 
-> Note: as of plan_3_catalog, the Room `products` table, `ProductDAO`, and `res/raw/products.json` are now **active** (they back the product grid) — they are no longer dead code.
+> Note: all former dead code is now either active or removed — the Room `products` table/`ProductDAO`/`products.json` (plan_3_catalog) and the staggered product grid (plan_6_settings) are active, and the unused `ProductEntry` class was deleted.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design context and [CODEBASE.md](CODEBASE.md) for the file map.

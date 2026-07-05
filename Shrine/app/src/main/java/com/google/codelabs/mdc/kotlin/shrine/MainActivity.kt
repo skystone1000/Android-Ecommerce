@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.codelabs.mdc.kotlin.shrine.fragments.CartFragment
 import com.google.codelabs.mdc.kotlin.shrine.fragments.LoginFragment
+import com.google.codelabs.mdc.kotlin.shrine.fragments.SettingsFragment
 
 class MainActivity : AppCompatActivity(), NavigationHost {
 
@@ -27,6 +28,10 @@ class MainActivity : AppCompatActivity(), NavigationHost {
         return when (item.itemId) {
             R.id.cart_icon -> {
                 gotoCart()
+                true
+            }
+            R.id.settings_icon -> {
+                navigateTo(SettingsFragment(), true)
                 true
             }
             else -> super.onOptionsItemSelected(item)

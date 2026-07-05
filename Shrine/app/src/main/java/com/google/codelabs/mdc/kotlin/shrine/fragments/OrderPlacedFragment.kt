@@ -2,13 +2,11 @@ package com.google.codelabs.mdc.kotlin.shrine.fragments
 
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import com.google.codelabs.mdc.kotlin.shrine.NavigationHost
 import com.google.codelabs.mdc.kotlin.shrine.R
@@ -42,7 +40,8 @@ class OrderPlacedFragment : Fragment() {
         super.onResume()
         val drawable:Drawable = requireView().findViewById<ImageView>(R.id.done).drawable
 
-        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+        // AnimatedVectorDrawable (framework) only exists on API 21+, so this instanceof check
+        // is the guard; no @RequiresApi annotation is needed.
         if (drawable is AnimatedVectorDrawable) {
             avd = drawable
             avd.start()

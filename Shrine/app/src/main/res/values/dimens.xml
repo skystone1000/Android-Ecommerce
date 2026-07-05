@@ -16,4 +16,8 @@
     <dimen name="shr_staggered_product_grid_card_height_portrait">247dp</dimen>
     <dimen name="shr_staggered_product_grid_card_width_landscape">188dp</dimen>
     <dimen name="shr_staggered_product_grid_card_height_landscape">140dp</dimen>
+
+    <!-- Horizontal 2-row staggered carousel -->
+    <dimen name="shr_staggered_recycler_height">380dp</dimen>
+    <dimen name="shr_staggered_card_image_height">120dp</dimen>
 </resources>

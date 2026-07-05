@@ -34,15 +34,15 @@ Shrine/
         │   │   │   └── PasswordHasher.kt         # Salted PBKDF2 hashing/verification
         │   │   ├── fragments/                   # One file per screen (see below)
         │   │   ├── adapters/
-        │   │   │   ├── lineargridlayout/        # ACTIVE RecyclerView adapters
-        │   │   │   └── staggeredgridlayout/     # DEAD CODE (unused adapters)
+        │   │   │   ├── lineargridlayout/        # Regular-grid RecyclerView adapters
+        │   │   │   └── staggeredgridlayout/     # Staggered-grid adapter (used when the setting is on)
         │   │   ├── database/                    # Room @Database + @Dao interfaces
         │   │   ├── models/                      # Room @Entity data classes
-        │   │   └── network/                     # ImageRequester (Volley); ProductEntry (dead)
+        │   │   └── network/                     # ImageRequester (Volley image loading)
         │   └── res/
         │       ├── layout/        # XML screens & list-item layouts (shr_*.xml)
         │       ├── drawable/ + drawable-v24/   # Vectors, icons, animated-vector "done"
-        │       ├── menu/shr_toolbar_menu.xml   # Toolbar cart icon
+        │       ├── menu/shr_toolbar_menu.xml   # Toolbar settings + cart icons
         │       ├── mipmap-*/      # Launcher icons
         │       ├── animator/      # Button state-list animator
         │       ├── raw/products.json           # Product catalog seed (loaded by ProductSeed)
@@ -61,14 +61,16 @@ Shrine/
 | `CartFragment.kt` | Cart | Loads + regroups cart rows; clear/checkout. |
 | `OrderPlacedFragment.kt` | Order confirmation | Animated "done" check; continue shopping. |
 | `ProfileFragment.kt` | Profile | Reads session from `SharedPreferences`; sign-out. |
+| `SettingsFragment.kt` | Settings | Toggle for staggered vs regular product grid; persists to `shrine_settings` prefs. |
 
 ### `database/`, `models/`, `adapters/`, `network/`
 
 - **`models/`**: `User` (`users` table; stores `user_pass_hash` + `user_pass_salt`, with a unique index on `user_email`), `CartItem` (`cart` table), `Product` (`products` table). All are Room `@Entity` data classes with an auto-generated primary key.
 - **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, **version 2**, `fallbackToDestructiveMigration`). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/getAll/clearCart/deleteCartItem), `ProductDAO` (insertAll/getAll/count — backs the product grid), and `ProductSeed` (parses `res/raw/products.json` to seed the `products` table on first run).
 - **`adapters/lineargridlayout/`**: `ProductCardRecyclerViewAdapter` (grid of products → tap adds to cart) and `CartRecyclerViewAdapter` (cart rows → tap remove deletes item). **Active.**
-- **`adapters/staggeredgridlayout/`**: `StaggeredProductCardRecyclerViewAdapter` + `StaggeredProductCardViewHolder`. **Dead code** — not instantiated anywhere.
-- **`network/`**: `ImageRequester` (Volley image loading; **active**, used by the adapters). `ProductEntry` + its `initProductEntryList(R.raw.products)` loader is **dead code** — referenced only inside commented-out blocks.
+- **`adapters/staggeredgridlayout/`**: `StaggeredProductCardRecyclerViewAdapter` + `StaggeredProductCardViewHolder`. **Active** — used by `ProductGridFragment` when the "Staggered product grid" setting is on (asymmetric layout, `Product`-backed, with add-to-cart).
+- **`network/`**: `ImageRequester` (Volley image loading; **active**, used by the adapters).
+- **`auth/`**: `PasswordHasher` (salted PBKDF2 hashing/verification for login + registration).
 
 ## Entry points
 
@@ -108,7 +110,7 @@ The APK's application id and launch component is `com.google.codelabs.mdc.kotlin
 - **Resource prefix:** most XML resources use the `shr_` prefix (`shr_login_fragment.xml`, `shr_toolbar_menu.xml`, `Theme.Shrine`, `Widget.Shrine.*`). Some newer additions do not (e.g. `baseline_shopping_cart_24.xml`, `delete_24.xml`).
 - **Layout ↔ view IDs:** views are accessed with `findViewById(R.id.<snake_case_id>)`. (This project was migrated off `kotlin-android-extensions` synthetics; do **not** reintroduce `kotlinx.android.synthetic` imports — they are removed in Kotlin 1.9.)
 - **Models:** entity fields use `snake_case` (e.g. `user_email`, `product_price`) to match column names.
-- **Async:** DB calls use Kotlin coroutines. Existing code uses `GlobalScope` / ad-hoc `CoroutineScope(Dispatchers.IO)`; prefer lifecycle scopes for new code (see ARCHITECTURE "Known issues").
+- **Async:** DB calls use Kotlin coroutines scoped to a lifecycle — `viewLifecycleOwner.lifecycleScope` in fragments, `(context as AppCompatActivity).lifecycleScope` in adapters — with `withContext(Dispatchers.IO)` for the DB work. Do not use `GlobalScope` (none remains).
 - **Styles/theme:** Material Components light theme `Theme.Shrine` (`styles.xml`); palette in `colors.xml` (primary `#E0E0E0`, accent/pink `#FEDBD0`, text `#442C2E`).
 
 ## Where to look to do common tasks
@@ -124,6 +126,7 @@ The APK's application id and launch component is `com.google.codelabs.mdc.kotlin
 | Change product image loading | `network/ImageRequester`. |
 | Change toolbar items | `res/menu/shr_toolbar_menu.xml` + `ProductGridFragment.onCreateOptionsMenu` + `MainActivity.onOptionsItemSelected`. |
 | Change colors/theme/strings | `res/values/colors.xml`, `styles.xml`, `strings.xml`. |
+| Change settings / grid layout toggle | `SettingsFragment` (+ `shr_settings_fragment.xml`); applied in `ProductGridFragment.renderGrid()`. |
 | Change build config / dependencies | `app/build.gradle` (module) and `build.gradle` (root). |
 
 See [FEATURES.md](FEATURES.md) for end-to-end feature behavior and [ARCHITECTURE.md](ARCHITECTURE.md) for the system design.

@@ -2,10 +2,8 @@ package com.google.codelabs.mdc.kotlin.shrine
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Drawable
-import android.util.DisplayMetrics
 import android.view.View
 import android.view.animation.Interpolator
 import android.widget.ImageView
@@ -23,9 +21,7 @@ class NavigationIconClickListener @JvmOverloads internal constructor(
     private var backdropShown = false
 
     init {
-        val displayMetrics = DisplayMetrics()
-        (context as Activity).windowManager.defaultDisplay.getMetrics(displayMetrics)
-        height = displayMetrics.heightPixels
+        height = context.resources.displayMetrics.heightPixels
     }
 
     override fun onClick(view: View) {

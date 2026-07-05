@@ -7,6 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.android.volley.toolbox.NetworkImageView
 import com.google.codelabs.mdc.kotlin.shrine.R
@@ -14,8 +16,9 @@ import com.google.codelabs.mdc.kotlin.shrine.database.ShrineDatabase
 import com.google.codelabs.mdc.kotlin.shrine.models.CartItem
 import com.google.codelabs.mdc.kotlin.shrine.models.Product
 import com.google.codelabs.mdc.kotlin.shrine.network.ImageRequester
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Adapter used to show a simple grid of products.
@@ -23,8 +26,6 @@ import kotlinx.coroutines.launch
 class ProductCardRecyclerViewAdapter internal constructor(
     val context: Context, private var productList: MutableList<Product>
 ) : RecyclerView.Adapter<ProductCardRecyclerViewAdapter.ProductCardViewHolder>() {
-
-    lateinit var database: ShrineDatabase
 
     /** Replace the backing list and refresh the view. Call on the main thread. */
     @SuppressLint("NotifyDataSetChanged")
@@ -55,11 +56,13 @@ class ProductCardRecyclerViewAdapter internal constructor(
             if (pos == RecyclerView.NO_POSITION || pos >= productList.size) return@setOnClickListener
             val product = productList[pos]
             Toast.makeText(context, "Item: " + product.product_name + " Added to cart", Toast.LENGTH_SHORT ).show()
-            database = ShrineDatabase.getDatabase(context)
-            GlobalScope.launch {
-                database.cartItemDao().insertCartItem(
-                    CartItem(0, product.product_id, product.product_name, product.product_price, product.product_url, "1")
-                )
+            val database = ShrineDatabase.getDatabase(context)
+            (context as AppCompatActivity).lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    database.cartItemDao().insertCartItem(
+                        CartItem(0, product.product_id, product.product_name, product.product_price, product.product_url, "1")
+                    )
+                }
             }
         }
     }

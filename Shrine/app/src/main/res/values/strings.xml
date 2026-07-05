@@ -33,5 +33,8 @@
     <string name="app_name">SHRINE</string>
     <string name="label_save">Register</string>
     <string name="shr_button_checkout">Checkout</string>
+    <string name="shr_settings_title">Settings</string>
+    <string name="shr_settings_staggered_label">Staggered product grid</string>
+    <string name="shr_settings_staggered_description">Show products in a horizontally-scrolling, two-row staggered carousel instead of a regular grid.</string>
     <string name="error_string">Field must not be empty.</string>
 </resources>

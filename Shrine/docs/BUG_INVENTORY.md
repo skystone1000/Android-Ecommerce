@@ -15,6 +15,8 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 - 2026-06-27 — plan_2_cart implemented: **B1** and **B7** fixed; **B2** now fully fixed (all three call sites navigate on the main thread); **B6** still partial (cart + cart-adapter done; add-to-cart adapter and register remain).
 - 2026-06-27 — plan_3_catalog implemented: **B8** fixed (DAO renamed `ProductDAO`, queries the `products` table, now used); **B11** partially fixed (hardcoded catalog removed, images render a branded placeholder, `products.json` now seeds the DB; staggered adapters + `ProductEntry` remain for plan_5).
 - 2026-06-27 — plan_4_security implemented: **B3** fixed (salted PBKDF2 hashing; no plaintext stored/compared); **B9** fixed (unique `user_email` index + pre-insert guard); **B6** advanced (register now lifecycle-scoped — only the add-to-cart adapter still uses `GlobalScope`). DB schema bumped to v2 (destructive migration).
+- 2026-06-27 — plan_5_cleanup implemented: **B10**, **B12**, **B13** fixed; **B11** resolved with a scope change — instead of deleting the staggered grid it was **repurposed into a feature** (Settings screen with a grid-layout toggle, see plan_6_settings). `ProductEntry` is the sole remaining unused class, intentionally retained.
+- 2026-06-27 — remaining items closed: **B6** fully fixed (`ProductCardRecyclerViewAdapter` add-to-cart now uses the host activity's `lifecycleScope` instead of `GlobalScope` — **no `GlobalScope` remains anywhere**); **B11** fully resolved (the unused `network/ProductEntry.kt` was removed). **All inventory items are now ✅.**
 
 | # | Severity | Bug | Location | Fix in | Status |
 |---|----------|-----|----------|--------|--------|
@@ -23,14 +25,14 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 | B3 | High | Passwords stored/compared in plaintext | `models/User.kt:14`; `fragments/RegisterFragment.kt:104`; `fragments/LoginFragment.kt:72` | plan_4_security | ✅ Fixed (plan_4_security) |
 | B4 | Medium | Login silently fails (no error feedback) | `fragments/LoginFragment.kt:72` (else branch commented) | plan_1_login | ✅ Fixed (plan_1_login) |
 | B5 | Medium | "Username" field actually requires the email | `fragments/LoginFragment.kt` + `res/layout/shr_login_fragment.xml`; query at `database/UserDAO.kt:13` | plan_1_login | ✅ Fixed (plan_1_login) |
-| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | `adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt` (add-to-cart insert) | plan_1_login, plan_2_cart, plan_4_security | 🟡 Partial — only the add-to-cart adapter insert remains |
+| B6 | Medium | `GlobalScope` coroutines are not lifecycle-aware | (all sites migrated) | plan_1_login, plan_2_cart, plan_4_security | ✅ Fixed — no `GlobalScope` remains |
 | B7 | Medium | `NumberFormatException` risk in cart totals | `fragments/CartFragment.kt:92` (`product_price.toInt()`, `product_quantity.toInt()`) | plan_2_cart | ✅ Fixed (plan_2_cart) |
 | B8 | Low* | `PrductDAO` queries the wrong table | `database/PrductDAO.kt:17` (`SELECT * FROM cart`), `:20` (`DELETE FROM cart`) | plan_3_catalog | ✅ Fixed (plan_3_catalog) |
 | B9 | Medium | No duplicate-email guard at registration | `database/UserDAO.kt` (no uniqueness); `fragments/RegisterFragment.kt:104` | plan_4_security | ✅ Fixed (plan_4_security) |
-| B10 | Low | Deprecated `defaultDisplay.getMetrics` | `NavigationIconClickListener.kt:27` | plan_5_cleanup | ⬜ Open |
-| B11 | Low | Dead code + stale image URLs | `adapters/staggeredgridlayout/*`, `network/ProductEntry.kt`, `res/raw/products.json`; hardcoded list in `fragments/ProductGridFragment.kt` | plan_3_catalog, plan_5_cleanup | 🟡 Partial — catalog/images fixed; staggered adapters + `ProductEntry` remain |
-| B12 | Low | Misplaced `@RequiresApi` on an `if` statement | `fragments/OrderPlacedFragment.kt:45` | plan_5_cleanup | ⬜ Open |
-| B13 | Low | `targetSdk 33` lags `compileSdk 34` | `app/build.gradle:7,11` | plan_5_cleanup | ⬜ Open |
+| B10 | Low | Deprecated `defaultDisplay.getMetrics` | `NavigationIconClickListener.kt:27` | plan_5_cleanup | ✅ Fixed (plan_5_cleanup) |
+| B11 | Low | Dead code + stale image URLs | `adapters/staggeredgridlayout/*`, `network/ProductEntry.kt`, `res/raw/products.json`; hardcoded list in `fragments/ProductGridFragment.kt` | plan_3_catalog, plan_5_cleanup | ✅ Fixed — catalog/images fixed, staggered repurposed, `ProductEntry` removed |
+| B12 | Low | Misplaced `@RequiresApi` on an `if` statement | `fragments/OrderPlacedFragment.kt:45` | plan_5_cleanup | ✅ Fixed (plan_5_cleanup) |
+| B13 | Low | `targetSdk 33` lags `compileSdk 34` | `app/build.gradle:7,11` | plan_5_cleanup | ✅ Fixed (plan_5_cleanup) |
 
 \* B8 is Low **today** because the DAO is dead code, but it is a latent High if ever wired up.
 
@@ -69,7 +71,8 @@ DB writes/reads for register, login, add-to-cart, remove-item, clear, and checko
 
 > **2026-06-27 (plan_1_login):** login now uses `viewLifecycleOwner.lifecycleScope`.
 > **2026-06-27 (plan_2_cart):** `CartFragment` (load/clear/checkout) and `CartRecyclerViewAdapter` (remove) now use lifecycle scopes instead of `GlobalScope`.
-> **2026-06-27 (plan_4_security):** `RegisterFragment` register insert migrated to `viewLifecycleOwner.lifecycleScope`. Only `ProductCardRecyclerViewAdapter` (the add-to-cart insert) still uses `GlobalScope` — it has no view lifecycle of its own; a future small cleanup can scope it to the host activity.
+> **2026-06-27 (plan_4_security):** `RegisterFragment` register insert migrated to `viewLifecycleOwner.lifecycleScope`.
+> **2026-06-27 (final):** `ProductCardRecyclerViewAdapter` add-to-cart now uses `(context as AppCompatActivity).lifecycleScope` + `withContext(Dispatchers.IO)`. **No `GlobalScope` remains anywhere in the codebase** (grep-verified). Verified on-device: one tap = exactly one cart insert, no crash.
 
 ### B7 — Cart total parsing can crash (Medium) — ✅ Fixed (plan_2_cart)
 `CartFragment` did `cartItem.product_price.toInt() * cartItem.product_quantity.toInt()` on free-form `String`s; any price containing `$`, decimals, or commas would throw `NumberFormatException` and crash the cart.
@@ -86,10 +89,10 @@ Nothing prevented two `User` rows with the same `user_email`; `getLogin` returns
 
 > **2026-06-27 (plan_4_security):** added a unique index on `user_email` (`@Entity(indices=[Index(value=["user_email"], unique=true)])`) and a pre-insert check (`getLogin(email) != null`) that shows "An account with this email already exists." on the email field and aborts. Verified on-device: re-registering `bob@x.com` is rejected and the user count stays at 1.
 
-### B10–B13 — Low
-- **B10**: `Activity.windowManager.defaultDisplay.getMetrics()` is deprecated (API 30+); use `WindowMetrics`/`Resources.displayMetrics`.
-- **B11** — 🟡 Partial (plan_3_catalog): the hardcoded catalog is gone (now seeded into Room from `products.json` and loaded via `ProductDAO`), and product images now show a branded `shr_logo` placeholder via `NetworkImageView` default/error image, so cards are never blank (verified: all remote product URLs return 404/000). **Still dead** and slated for plan_5: `StaggeredProductCardRecyclerViewAdapter`/`...ViewHolder` and `network/ProductEntry.kt` (its `initProductEntryList` no longer matches the repurposed `products.json` schema but is never called).
-- **B12**: `@RequiresApi(LOLLIPOP)` annotates an `if` statement in `OrderPlacedFragment` rather than a method; `minSdk 16` makes the guard meaningful but the placement is wrong.
-- **B13**: `targetSdk 33` while `compileSdk 34`; align `targetSdk` to 34 after a quick behavior check.
+### B10–B13 — Low — ✅ Fixed (plan_5_cleanup)
+- **B10** ✅: replaced the deprecated `Activity.windowManager.defaultDisplay.getMetrics()` in `NavigationIconClickListener` with `context.resources.displayMetrics.heightPixels` (and dropped the now-unused `Activity`/`DisplayMetrics` imports). Verified on-device: the backdrop reveal still animates.
+- **B11** ✅ Fixed (plan_3_catalog + plan_5_cleanup + final): hardcoded catalog gone (Room-seeded), images show a branded `shr_logo` placeholder (all remote product URLs return 404/000). The staggered grid was repurposed into a real feature (see [plan_6_settings](plan_6_settings.md)). The last unused class, `network/ProductEntry.kt`, has now been **removed** (`products.json` stays — it is used by `ProductSeed`). No dead code paths remain.
+- **B12** ✅: removed the misplaced `@RequiresApi(LOLLIPOP)` in `OrderPlacedFragment` (the `is AnimatedVectorDrawable` runtime check is the real guard) and its unused `Build`/`RequiresApi` imports.
+- **B13** ✅: `targetSdkVersion` raised to 34 to match `compileSdk`; full flow re-verified on-device.
 
 See [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md) for new work and the `plan_*` files for fixes.
