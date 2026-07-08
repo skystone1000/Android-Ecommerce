@@ -22,7 +22,7 @@ Shrine is a single-module Android application written in Kotlin. It originates f
 
 | Component | Type | Responsibility |
 |-----------|------|----------------|
-| `ShrineApplication` | `Application` | Process entry point. Holds a static `instance` and enables vector-drawable support. Registered in the manifest as `android:name`. |
+| `ShrineApplication` | `Application` (`@HiltAndroidApp`) | Process entry point. Holds a static `instance` and enables vector-drawable support. Annotated `@HiltAndroidApp` (Hilt DI root, added in plan_8 Phase 0). Registered in the manifest as `android:name`. |
 | `MainActivity` | `Activity` + `NavigationHost` | Hosts all fragments; performs fragment transactions; routes the toolbar cart/settings menu items to `CartFragment` / `SettingsFragment`. |
 | `NavigationHost` | interface | Contract for "navigate to fragment (optionally add to back stack)". Decouples fragments/adapters from `MainActivity`. |
 | Fragments (`fragments/`) | UI screens | One fragment per screen: Login, Register, ProductGrid, Cart, OrderPlaced, Profile, Settings. |
@@ -60,16 +60,17 @@ Each hop calls `(<host> as NavigationHost).navigateTo(fragment, addToBackstack)`
 
 ## External dependencies & integrations
 
-Declared in [app/build.gradle](../app/build.gradle):
+Declared in [app/build.gradle](../app/build.gradle); all versions are centralised in the **Gradle version catalog** [gradle/libs.versions.toml](../gradle/libs.versions.toml) (added in plan_8 Phase 0).
 
 | Dependency | Version | Used for |
 |------------|---------|----------|
 | Material Components (`com.google.android.material`) | 1.6.0 | Theming, `TextInputLayout`, `MaterialButton`, toolbar, cards. |
-| AndroidX Room (`room-runtime`, `room-ktx`, `room-compiler`) | 2.6.1 | Local SQLite persistence + DAOs (kapt annotation processing). |
-| Kotlin Coroutines (`coroutines-core`, `coroutines-android`) | 1.6.4 | Off-main-thread DB calls. |
-| Volley (`com.android.volley`) | 1.2.1 | `ImageRequester` HTTP image loading. |
+| AndroidX Room (`room-runtime`, `room-ktx`, `room-compiler`) | 2.6.1 | Local SQLite persistence + DAOs (**KSP** annotation processing). |
+| Kotlin Coroutines (`coroutines-core`, `coroutines-android`) | 1.9.0 | Off-main-thread DB calls. |
+| Volley (`com.android.volley`) | 1.2.1 | `ImageRequester` HTTP image loading (to be replaced by Coil in plan_8 Phase 2). |
 | Gson (`com.google.code.gson`) | 2.9.0 | JSON parsing of the bundled catalog in `ProductSeed` (seeds the `products` table). |
-| `androidx.legacy:legacy-support-v4` | 1.0.0 | Legacy support libs. |
+
+**Modernisation scaffolding (plan_8 Phase 0 — present but not yet wired into the live Fragment/XML UI):** Hilt (`hilt-android` 2.52, `hilt-navigation-compose` 1.2.0), Jetpack Compose (`compose-bom` 2024.12.01 → `ui`/`material3`, `activity-compose`, `lifecycle-viewmodel-compose` 2.8.7), Navigation-Compose 2.8.4, DataStore Preferences 1.1.1, Coil 3.0.4 (`coil-compose` + `coil-network-okhttp`), and `kotlinx-serialization-json` 1.7.3. The legacy `androidx.legacy:legacy-support-v4` dependency was **removed** (minSdk raised to 24).
 
 **Network use:** the only outbound network traffic is product-image loading via Volley to `storage.googleapis.com` / other image hosts. The manifest declares `INTERNET` and `ACCESS_NETWORK_STATE` permissions. There is no application backend/API — all app data is local.
 
@@ -78,9 +79,9 @@ Declared in [app/build.gradle](../app/build.gradle):
 | Layer | Version | Notes |
 |-------|---------|-------|
 | Gradle | 8.7 | [gradle-wrapper.properties](../gradle/wrapper/gradle-wrapper.properties). Required for JDK 21 support. |
-| Android Gradle Plugin | 8.5.2 | [build.gradle](../build.gradle). |
-| Kotlin | 1.9.24 | `ext.kotlin_version`. |
-| compileSdk / targetSdk / minSdk | 34 / 33 / 16 | [app/build.gradle](../app/build.gradle). |
+| Android Gradle Plugin | 8.6.1 | Declared in the version catalog, applied via the `plugins {}` block in [build.gradle](../build.gradle). |
+| Kotlin | 2.0.21 | With the Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`), KSP (`2.0.21-1.0.28`), and the serialization plugin. |
+| compileSdk / targetSdk / minSdk | 35 / 35 / 24 | [app/build.gradle](../app/build.gradle). minSdk raised from 16 in plan_8 Phase 0. |
 | Java / Kotlin JVM target | 17 | `compileOptions` + `kotlinOptions`. |
 
 ## Key design decisions (with rationale)
@@ -89,7 +90,7 @@ Declared in [app/build.gradle](../app/build.gradle):
 - **Room over raw SQLite.** Compile-time-checked queries and DAO abstraction; chosen when login/register/cart features were added on top of the codelab.
 - **`SharedPreferences` for the session, DB for credentials.** The current user "session" is intentionally lightweight (just cached profile strings) and kept separate from the credential store. Sign-out clears preferences and relaunches the task to reset the back stack.
 - **Backdrop reveal animation via `NavigationIconClickListener`.** A codelab-style Material "backdrop": the product grid sheet translates down on the Y-axis to reveal a menu behind it, toggled by the toolbar nav icon.
-- **`vectorDrawables.useSupportLibrary = true` + `setCompatVectorFromResourcesEnabled(true)`.** Enables vector drawable assets (logo, icons, animated "done" check) down to the low `minSdk` (16).
+- **`vectorDrawables.useSupportLibrary = true` + `setCompatVectorFromResourcesEnabled(true)`.** Enables vector drawable assets (logo, icons, animated "done" check); originally needed for the old low `minSdk`, retained after the plan_8 Phase 0 bump to `minSdk` 24.
 
 ## Known issues & technical debt
 

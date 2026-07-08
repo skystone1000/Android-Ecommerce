@@ -12,14 +12,15 @@ The Android project lives in the `Shrine/` directory of the repository (the repo
 
 ```
 Shrine/
-├── build.gradle                 # Root Gradle: AGP 8.5.2, Kotlin 1.9.24, repos
-├── settings.gradle              # include ':app'
+├── build.gradle                 # Root Gradle: declares plugins (AGP 8.6.1, Kotlin 2.0.21, KSP, Hilt) via plugins {} + version catalog
+├── settings.gradle              # pluginManagement + dependencyResolutionManagement (repos); include ':app'
 ├── gradle.properties            # AndroidX + Jetifier flags, JVM args
+├── gradle/libs.versions.toml    # Version catalog: all plugin/library versions
 ├── gradle/wrapper/...           # Gradle 8.7 wrapper
 ├── local.properties             # sdk.dir (machine-local, not committed)
 ├── docs/                        # ← documentation (this folder)
 └── app/
-    ├── build.gradle             # Module Gradle: SDKs, deps (Room, Volley, Gson, coroutines)
+    ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Room via KSP, Hilt, Compose, Coil, DataStore, Nav-Compose, Volley, Gson, coroutines)
     ├── proguard-rules.pro       # ProGuard rules (release; minify disabled)
     └── src/
         ├── main/
@@ -80,7 +81,7 @@ Shrine/
 
 ## Build & run commands
 
-Run from the `Shrine/` directory. Requires a JDK 17–21 and an Android SDK with platforms **33 and 34** + build-tools 33 installed.
+Run from the `Shrine/` directory. Requires a JDK **17–21** (Android Studio's bundled JBR 21 works) and an Android SDK with platform **35** + build-tools 35 installed.
 
 ```bash
 # From repo root:
@@ -127,6 +128,6 @@ The APK's application id and launch component is `com.google.codelabs.mdc.kotlin
 | Change toolbar items | `res/menu/shr_toolbar_menu.xml` + `ProductGridFragment.onCreateOptionsMenu` + `MainActivity.onOptionsItemSelected`. |
 | Change colors/theme/strings | `res/values/colors.xml`, `styles.xml`, `strings.xml`. |
 | Change settings / grid layout toggle | `SettingsFragment` (+ `shr_settings_fragment.xml`); applied in `ProductGridFragment.renderGrid()`. |
-| Change build config / dependencies | `app/build.gradle` (module) and `build.gradle` (root). |
+| Change build config / dependencies | `app/build.gradle` (module) and `build.gradle` (root); bump versions in `gradle/libs.versions.toml` (version catalog). |
 
 See [FEATURES.md](FEATURES.md) for end-to-end feature behavior and [ARCHITECTURE.md](ARCHITECTURE.md) for the system design.
