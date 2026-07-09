@@ -19,6 +19,12 @@ Shrine/
 ├── gradle/wrapper/...           # Gradle 8.7 wrapper
 ├── local.properties             # sdk.dir (machine-local, not committed)
 ├── docs/                        # ← documentation (this folder)
+├── core/
+│   └── designsystem/            # plan_8 Phase 1: Compose design system (com.android.library)
+│       └── src/main/java/.../designsystem/
+│           ├── theme/           # Color, Type, Shape, Dimens, ExtendedColors, ShrineTheme
+│           ├── component/       # Buttons, TextFields, Selection, Chips, Product, Bars, Lists, Feedback, States
+│           └── gallery/         # ComponentGallery.kt (@Preview light + dark — Phase 1 exit gate)
 └── app/
     ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Room via KSP, Hilt, Compose, Coil, DataStore, Nav-Compose, Volley, Gson, coroutines)
     ├── proguard-rules.pro       # ProGuard rules (release; minify disabled)

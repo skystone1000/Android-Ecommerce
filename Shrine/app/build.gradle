@@ -38,6 +38,9 @@ android {
 }
 
 dependencies {
+    // Design system module (plan_8 Phase 1)
+    implementation project(':core:designsystem')
+
     // UI (existing XML/Fragment stack — removed in Phase 5)
     api libs.material
     implementation libs.androidx.fragment.ktx

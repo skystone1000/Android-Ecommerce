@@ -6,13 +6,13 @@ scope: System design, components, data/control flow, dependencies, and key desig
 
 # Architecture
 
-Shrine is a single-module Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been extended with user authentication and a shopping cart backed by a local Room database.
+Shrine is an Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been extended with user authentication and a shopping cart backed by a local Room database. A modernisation to Jetpack Compose is in progress (see [plan_8_modernise.md](plan_8_modernise.md)); the first new module, `:core:designsystem`, exists alongside the original `:app`.
 
 > All paths below are relative to the `Shrine/` project directory unless noted.
 
 ## High-level shape
 
-- **One Gradle module:** `:app` (see [settings.gradle](../settings.gradle)).
+- **Gradle modules:** `:app` plus `:core:designsystem` (see [settings.gradle](../settings.gradle)). `:core:designsystem` is the plan_8 Phase 1 Compose design system (theme + components); the live UI is still the `:app` Fragment/XML stack and does not consume it yet.
 - **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity`. All screens are `Fragment`s swapped into a single `FrameLayout` container (`R.id.container`, defined in [shr_main_activity.xml](../app/src/main/res/layout/shr_main_activity.xml)).
 - **Manual navigation:** there is no Jetpack Navigation component. Navigation is performed through the [`NavigationHost`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationHost.kt) interface, which `MainActivity` implements via `supportFragmentManager` transactions.
 - **Local persistence:** a Room database named `contactDB` (version 3, [`ShrineDatabase`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ShrineDatabase.kt)) stores users, products, and per-user cart items.
@@ -71,6 +71,8 @@ Declared in [app/build.gradle](../app/build.gradle); all versions are centralise
 | Gson (`com.google.code.gson`) | 2.9.0 | JSON parsing of the bundled catalog in `ProductSeed` (seeds the `products` table). |
 
 **Modernisation scaffolding (plan_8 Phase 0 — present but not yet wired into the live Fragment/XML UI):** Hilt (`hilt-android` 2.52, `hilt-navigation-compose` 1.2.0), Jetpack Compose (`compose-bom` 2024.12.01 → `ui`/`material3`, `activity-compose`, `lifecycle-viewmodel-compose` 2.8.7), Navigation-Compose 2.8.4, DataStore Preferences 1.1.1, Coil 3.0.4 (`coil-compose` + `coil-network-okhttp`), and `kotlinx-serialization-json` 1.7.3. The legacy `androidx.legacy:legacy-support-v4` dependency was **removed** (minSdk raised to 24).
+
+**Design system module (`:core:designsystem`, plan_8 Phase 1).** A standalone `com.android.library` module exposing the Compose UI foundation: `ShrineTheme` (brand light/dark `ColorScheme`, `Typography`, `Shapes`, plus extended success/warning colors and spacing/elevation tokens — dynamic color is deliberately disabled), and the reusable component set (buttons, text/password/search fields, chips, selection controls, product card, price/rating/stepper, app bars, bottom nav, tabs, list rows, feedback dialogs/snackbar, and empty/loading-skeleton/error states). A `@Preview` gallery (`gallery/ComponentGallery.kt`) renders every component in light + dark. Color/type/spacing/shape tokens come 1:1 from the figma design doc.
 
 **Network use:** the only outbound network traffic is product-image loading via Volley to `storage.googleapis.com` / other image hosts. The manifest declares `INTERNET` and `ACCESS_NETWORK_STATE` permissions. There is no application backend/API — all app data is local.
 
