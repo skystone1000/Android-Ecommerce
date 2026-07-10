@@ -38,8 +38,10 @@ android {
 }
 
 dependencies {
-    // Design system module (plan_8 Phase 1)
+    // Modernisation modules (plan_8 Phase 1 + 2)
     implementation project(':core:designsystem')
+    implementation project(':core:data')
+    implementation project(':core:model')
 
     // UI (existing XML/Fragment stack — removed in Phase 5)
     api libs.material

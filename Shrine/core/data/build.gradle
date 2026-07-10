@@ -1,0 +1,50 @@
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+}
+
+android {
+    namespace 'com.google.codelabs.mdc.kotlin.shrine.core.data'
+    compileSdk 35
+    defaultConfig {
+        minSdk 24
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+dependencies {
+    api project(':core:model')
+    api project(':core:database')
+
+    implementation libs.room.runtime
+    implementation libs.room.ktx
+
+    implementation libs.coroutines.core
+    implementation libs.kotlinx.serialization.json
+    implementation libs.datastore.preferences
+
+    implementation libs.hilt.android
+    ksp libs.hilt.compiler
+
+    // Repository unit tests run on the JVM via Robolectric with an in-memory Room DB.
+    testImplementation libs.junit
+    testImplementation libs.robolectric
+    testImplementation libs.androidx.test.core
+    testImplementation libs.coroutines.test
+    testImplementation libs.room.runtime
+}

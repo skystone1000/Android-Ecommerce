@@ -27,6 +27,7 @@ This plan rebuilds the UI and architecture on a modern stack while preserving th
 | Images | **Coil 3** (replaces Volley/`ImageRequester`). |
 | Build | Gradle **version catalog** (`libs.versions.toml`), **KSP** (replaces kapt) for Room + Hilt, Compose Compiler Gradle plugin (Kotlin 2.x). |
 | Modularisation | Pragmatic multi-module: `:app`, `:core:designsystem`, `:core:data`, `:core:database`, `:core:model`, `:feature:*`. (Start single-module-with-packages if preferred; the package structure below maps 1:1 to modules.) |
+| Package / app id | Migrate **`com.google.codelabs.mdc.kotlin.shrine` → `com.skystone1000.shrine`** (both the Gradle `applicationId` and the source package / module `namespace`s). New modules use `com.skystone1000.shrine.{core.*, designsystem, feature.*}`. Executed as a single pass in **Phase 6** (after legacy is deleted, so only the surviving Compose code is touched). The `shr_` resource prefix, `Theme.Shrine` style names, and the user-facing app **display name** are out of scope here (brand renaming is tracked separately). |
 
 ## Target architecture
 
@@ -178,7 +179,23 @@ Every screen ships with empty/loading/error states (closes B23 permanently) and 
 - Remove all Fragments, XML layouts, RecyclerView adapters, `NavigationHost`, `NavigationIconClickListener`, `ImageRequester`/Volley, per-Activity `SharedPreferences` usage.
 - _Exit:_ no `androidx.fragment`/Volley/XML-layout references remain.
 
-### Phase 6 — Quality gates
+### Phase 6 — Package & application-id migration
+Rename `com.google.codelabs.mdc.kotlin.shrine*` → `com.skystone1000.shrine*` in one mechanical pass. Done **here**, after Phase 5, because the legacy Fragment code is already gone — so only the surviving Compose modules are renamed, once, over a stable tree.
+
+> **Current state:** Phases 0–2 created `:core:model` / `:core:database` / `:core:data` (and `:core:designsystem`) under the *old* package `com.google.codelabs.mdc.kotlin.shrine.{core.*, designsystem}`. This phase renames those too — it is the single place the whole codebase moves to the new package.
+
+Checklist:
+- **Gradle:** set `applicationId` **and** `namespace` in `:app/build.gradle` to `com.skystone1000.shrine`; set each module `namespace` to `com.skystone1000.shrine.{core.model, core.database, core.data, designsystem, feature.*}`.
+- **Source:** move each module's source dir to the new package path and update every `package` / `import` declaration (prefer the IDE's *Refactor → Rename package*; otherwise a scripted find-replace of the package prefix across `*.kt`).
+- **Manifest:** update the `application android:name` reference (it currently uses the fully-qualified legacy name); relative component refs like `.MainActivity` track the new `namespace` automatically.
+- **DI / generated code:** Hilt (`@HiltAndroidApp`, components) and Room/KSP regenerate under the new package automatically once sources move.
+- **Tests:** rename test source packages to match.
+- _Out of scope:_ `shr_` resources, `Theme.Shrine`, and the display name (separate brand task).
+- _Exit:_ `assembleDebug` + unit tests green, and `grep -r "com.google.codelabs.mdc.kotlin.shrine"` over the repo (excluding build output) returns **no** matches.
+
+> **If a stable store identity is wanted sooner,** the `applicationId` alone can be flipped earlier (it is independent of the source package); the source/namespace rename is still best batched here to avoid churn while screens are in flight.
+
+### Phase 7 — Quality gates
 - **Unit:** ViewModels (Turbine for `StateFlow`), repositories, `PasswordHasher`, money math.
 - **UI:** Compose tests for each screen; navigation test (auth→main, sign-out).
 - **Screenshot:** Roborazzi/Paparazzi for the design-system gallery (light + dark) and key screens.
@@ -194,8 +211,9 @@ Compose BOM, `material3`, `navigation-compose`, `hilt-android` + `hilt-navigatio
 - **Price model change (String→cents)** → one-time data/seed migration; covered by money-math unit tests.
 - **Scope creep (full e-commerce)** → Phase 4 table is the contract; backlog beyond it stays in [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md).
 - **minSdk 24** drops <1% legacy devices — accepted.
+- **Package rename** (`…mdc.kotlin.shrine` → `…skystone1000.shrine`) is a wide mechanical refactor → done as one IDE-assisted pass in Phase 6 after legacy deletion (fewer files, stable tree), verified by a full-repo grep + green build/tests. Note: changing `applicationId` resets the installed-app identity (a fresh install, not an upgrade) — fine for the demo.
 
 ## Definition of done
-Single-Activity Compose app; the full figma screen set on the new stack with light/dark (15 designed screens + Addresses/Payment-methods management; placeholders rendered per the [coverage map](#ui-coverage-map-figma--plan)); Fragments/XML/Volley deleted; repositories + Hilt + DataStore in place; tests green in CI; docs (`ARCHITECTURE`, `CODEBASE`, `FEATURES`) updated to describe the Compose architecture.
+Single-Activity Compose app shipped under applicationId/package **`com.skystone1000.shrine`**; the full figma screen set on the new stack with light/dark (15 designed screens + Addresses/Payment-methods management; placeholders rendered per the [coverage map](#ui-coverage-map-figma--plan)); Fragments/XML/Volley deleted; repositories + Hilt + DataStore in place; no references to the old `com.google.codelabs.mdc.kotlin.shrine` package remain; tests green in CI; docs (`ARCHITECTURE`, `CODEBASE`, `FEATURES`) updated to describe the Compose architecture.
 
 See [design_brief_modernise.md](design_brief_modernise.md) for the UI generation prompt (design system + every screen).
