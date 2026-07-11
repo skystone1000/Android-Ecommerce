@@ -1,62 +1,23 @@
 package com.google.codelabs.mdc.kotlin.shrine
 
 import android.os.Bundle
-import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
-import com.google.codelabs.mdc.kotlin.shrine.fragments.CartFragment
-import com.google.codelabs.mdc.kotlin.shrine.fragments.LoginFragment
-import com.google.codelabs.mdc.kotlin.shrine.fragments.SettingsFragment
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import com.google.codelabs.mdc.kotlin.shrine.ui.ShrineApp
+import dagger.hilt.android.AndroidEntryPoint
 
-class MainActivity : AppCompatActivity(), NavigationHost {
+/**
+ * Single-Activity host for the Compose app (plan_8 Phase 3). Renders [ShrineApp], which owns the
+ * NavHost (auth/main graphs) and the bottom-bar scaffold. The legacy Fragment/XML stack is no
+ * longer launched and is removed in Phase 5.
+ */
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.shr_main_activity)
-
-        if (savedInstanceState == null) {
-            supportFragmentManager
-                    .beginTransaction()
-                    .add(R.id.container, LoginFragment())
-                    .commit()
+        setContent {
+            ShrineApp()
         }
-
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle item selection
-        return when (item.itemId) {
-            R.id.cart_icon -> {
-                gotoCart()
-                true
-            }
-            R.id.settings_icon -> {
-                navigateTo(SettingsFragment(), true)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun gotoCart() {
-        navigateTo(CartFragment(), true)
-    }
-
-    /**
-     * Navigate to the given fragment.
-     *
-     * @param fragment       Fragment to navigate to.
-     * @param addToBackstack Whether or not the current fragment should be added to the backstack.
-     */
-    override fun navigateTo(fragment: Fragment, addToBackstack: Boolean) {
-        val transaction = supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.container, fragment)
-
-        if (addToBackstack) {
-            transaction.addToBackStack(null)
-        }
-
-        transaction.commit()
     }
 }

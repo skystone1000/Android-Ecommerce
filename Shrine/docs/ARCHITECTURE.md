@@ -12,9 +12,9 @@ Shrine is an Android application written in Kotlin. It originates from the Googl
 
 ## High-level shape
 
-- **Gradle modules:** `:app`, `:core:designsystem`, `:core:model`, `:core:database`, `:core:data` (see [settings.gradle](../settings.gradle)). The `:core:*` modules are plan_8 modernisation scaffolding; the live UI is still the `:app` Fragment/XML stack and does not consume them yet (the legacy `models/`, `database/`, `auth/`, and `network/` packages in `:app` remain the app's runtime data layer until Phase 5).
-- **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity`. All screens are `Fragment`s swapped into a single `FrameLayout` container (`R.id.container`, defined in [shr_main_activity.xml](../app/src/main/res/layout/shr_main_activity.xml)).
-- **Manual navigation:** there is no Jetpack Navigation component. Navigation is performed through the [`NavigationHost`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationHost.kt) interface, which `MainActivity` implements via `supportFragmentManager` transactions.
+- **Gradle modules:** `:app`, `:core:designsystem`, `:core:model`, `:core:database`, `:core:data` (see [settings.gradle](../settings.gradle)). As of plan_8 Phase 3 the `:app` Compose entry point (`ui/`) consumes `:core:designsystem` and `:core:data`. The legacy `models/`, `database/`, `auth/`, and `network/` packages in `:app` (plus the Fragments/XML) are no longer launched but remain compilable until Phase 5 deletes them.
+- **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity`. As of plan_8 Phase 3 it is a `ComponentActivity` (`@AndroidEntryPoint`) that `setContent { ShrineApp() }` — a 100% Compose host. The previous Fragment-in-`FrameLayout` approach (`shr_main_activity.xml`, `R.id.container`) is legacy and unreachable pending Phase 5.
+- **Navigation:** [`ShrineApp`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/ShrineApp.kt) hosts a **Navigation-Compose** `NavHost` with type-safe routes (kotlinx-serialization, see `ui/navigation/Routes.kt`) split into nested **auth** and **main** graphs, under a bottom-bar `Scaffold`. The legacy [`NavigationHost`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationHost.kt) interface + `supportFragmentManager` transactions are dead code until Phase 5.
 - **Local persistence:** a Room database named `contactDB` (version 3, [`ShrineDatabase`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ShrineDatabase.kt)) stores users, products, and per-user cart items.
 - **Session state:** the logged-in user's details are cached in `SharedPreferences` (per-Activity `getPreferences(MODE_PRIVATE)`), not in the database.
 
@@ -23,7 +23,8 @@ Shrine is an Android application written in Kotlin. It originates from the Googl
 | Component | Type | Responsibility |
 |-----------|------|----------------|
 | `ShrineApplication` | `Application` (`@HiltAndroidApp`) | Process entry point. Holds a static `instance` and enables vector-drawable support. Annotated `@HiltAndroidApp` (Hilt DI root, added in plan_8 Phase 0). Registered in the manifest as `android:name`. |
-| `MainActivity` | `Activity` + `NavigationHost` | Hosts all fragments; performs fragment transactions; routes the toolbar cart/settings menu items to `CartFragment` / `SettingsFragment`. |
+| `MainActivity` | `ComponentActivity` (`@AndroidEntryPoint`) | Compose host (Phase 3): `setContent { ShrineApp() }`. (Previously an `AppCompatActivity` + `NavigationHost` that hosted Fragments — now legacy/unreachable.) |
+| `ShrineApp` (`ui/`) | `@Composable` | Root Compose UI: `ShrineTheme` + `NavHost` (auth/main nested graphs, type-safe routes) + bottom-bar `Scaffold`. Phase 3 ships stub screens; `AppViewModel` drives the Splash → Auth/Main gate from `SessionRepository`. |
 | `NavigationHost` | interface | Contract for "navigate to fragment (optionally add to back stack)". Decouples fragments/adapters from `MainActivity`. |
 | Fragments (`fragments/`) | UI screens | One fragment per screen: Login, Register, ProductGrid, Cart, OrderPlaced, Profile, Settings. |
 | RecyclerView adapters (`adapters/`) | UI binding | Bind product/cart lists to views and handle item taps (add to cart, remove from cart). |
@@ -35,6 +36,8 @@ Shrine is an Android application written in Kotlin. It originates from the Googl
 | `NavigationIconClickListener` | `View.OnClickListener` | Animates the product-grid "backdrop" reveal when the toolbar nav icon is tapped. |
 
 ## Control flow (navigation graph)
+
+> **As of plan_8 Phase 3** the app launches into the Compose `ShrineApp` `NavHost`: a `Splash` destination reads `SessionRepository` and routes to the **auth graph** (`Login ⇄ Register`, `Skip`→guest) or the **main graph** (bottom-bar tabs Home · Search · Cart · Saved · Profile, plus pushed detail/checkout/account screens), with sign-out switching graphs. Phase 3 uses stub screens. The Fragment flow described below is the **legacy** path, retained but unreachable until Phase 5.
 
 `MainActivity.onCreate` adds `LoginFragment` as the first screen. From there:
 

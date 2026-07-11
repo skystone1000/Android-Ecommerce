@@ -36,14 +36,19 @@ Shrine/
         ├── main/
         │   ├── AndroidManifest.xml         # Permissions, Application, MainActivity (LAUNCHER)
         │   ├── java/com/google/codelabs/mdc/kotlin/shrine/
-        │   │   ├── MainActivity.kt             # Single Activity, NavigationHost impl
-        │   │   ├── NavigationHost.kt           # navigateTo(...) interface
-        │   │   ├── NavigationIconClickListener.kt  # Backdrop reveal animation
+        │   │   ├── MainActivity.kt             # Phase 3: ComponentActivity → setContent { ShrineApp() }
+        │   │   ├── ui/                          # Phase 3 Compose entry point
+        │   │   │   ├── ShrineApp.kt             #   NavHost (auth/main graphs) + bottom-bar Scaffold
+        │   │   │   ├── AppViewModel.kt          #   session gate (Splash→Auth/Main), sign-in/guest/out
+        │   │   │   ├── navigation/Routes.kt     #   @Serializable type-safe destinations
+        │   │   │   └── screens/SkeletonScreens.kt  # StubScreen + SplashScreen (replaced in Phase 4)
+        │   │   ├── NavigationHost.kt           # navigateTo(...) interface — LEGACY (unused, deleted Phase 5)
+        │   │   ├── NavigationIconClickListener.kt  # Backdrop reveal animation — LEGACY
         │   │   ├── application/
-        │   │   │   └── ShrineApplication.kt     # Application subclass, static instance
+        │   │   │   └── ShrineApplication.kt     # Application subclass (@HiltAndroidApp), static instance
         │   │   ├── auth/
-        │   │   │   └── PasswordHasher.kt         # Salted PBKDF2 hashing/verification
-        │   │   ├── fragments/                   # One file per screen (see below)
+        │   │   │   └── PasswordHasher.kt         # Salted PBKDF2 — LEGACY (ported to :core:data)
+        │   │   ├── fragments/                   # One file per screen — LEGACY (see below)
         │   │   ├── adapters/
         │   │   │   ├── lineargridlayout/        # Regular-grid RecyclerView adapters
         │   │   │   └── staggeredgridlayout/     # Staggered-grid adapter (used when the setting is on)
@@ -85,9 +90,9 @@ Shrine/
 
 ## Entry points
 
-1. **Process:** `ShrineApplication.onCreate` (manifest `android:name`).
-2. **UI:** `MainActivity` — the `LAUNCHER` activity. `onCreate` adds `LoginFragment` to `R.id.container`.
-3. **First screen seen by the user:** `LoginFragment`.
+1. **Process:** `ShrineApplication.onCreate` (manifest `android:name`; `@HiltAndroidApp`).
+2. **UI:** `MainActivity` — the `LAUNCHER` activity. As of plan_8 Phase 3, `onCreate` calls `setContent { ShrineApp() }` (Compose); it no longer inflates a layout or adds Fragments.
+3. **First screen seen by the user:** the Compose `Splash` destination in `ShrineApp`, which routes to `Login` (no session) or `Home` (session/guest). *(Legacy: `LoginFragment` — no longer launched.)*
 
 ## Build & run commands
 
