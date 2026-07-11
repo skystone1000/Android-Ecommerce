@@ -24,7 +24,7 @@ Shrine is an Android application written in Kotlin. It originates from the Googl
 |-----------|------|----------------|
 | `ShrineApplication` | `Application` (`@HiltAndroidApp`) | Process entry point. Holds a static `instance` and enables vector-drawable support. Annotated `@HiltAndroidApp` (Hilt DI root, added in plan_8 Phase 0). Registered in the manifest as `android:name`. |
 | `MainActivity` | `ComponentActivity` (`@AndroidEntryPoint`) | Compose host (Phase 3): `setContent { ShrineApp() }`. (Previously an `AppCompatActivity` + `NavigationHost` that hosted Fragments — now legacy/unreachable.) |
-| `ShrineApp` (`ui/`) | `@Composable` | Root Compose UI: `ShrineTheme` + `NavHost` (auth/main nested graphs, type-safe routes) + bottom-bar `Scaffold`. Phase 3 ships stub screens; `AppViewModel` drives the Splash → Auth/Main gate from `SessionRepository`. |
+| `ShrineApp` (`ui/`) | `@Composable` | Root Compose UI: `ShrineTheme` (theme honors `SettingsRepository`) + `NavHost` (auth/main nested graphs, type-safe routes) + bottom-bar `Scaffold`. As of Phase 4 every destination is a real screen (`ui/screens/`), each a stateless `@Composable` + `@HiltViewModel` + `UiState` wired to a `:core:data` repository. `AppViewModel` drives the Splash → Auth/Main gate from `SessionRepository` and exposes the theme + sign-out. |
 | `NavigationHost` | interface | Contract for "navigate to fragment (optionally add to back stack)". Decouples fragments/adapters from `MainActivity`. |
 | Fragments (`fragments/`) | UI screens | One fragment per screen: Login, Register, ProductGrid, Cart, OrderPlaced, Profile, Settings. |
 | RecyclerView adapters (`adapters/`) | UI binding | Bind product/cart lists to views and handle item taps (add to cart, remove from cart). |
@@ -37,7 +37,7 @@ Shrine is an Android application written in Kotlin. It originates from the Googl
 
 ## Control flow (navigation graph)
 
-> **As of plan_8 Phase 3** the app launches into the Compose `ShrineApp` `NavHost`: a `Splash` destination reads `SessionRepository` and routes to the **auth graph** (`Login ⇄ Register`, `Skip`→guest) or the **main graph** (bottom-bar tabs Home · Search · Cart · Saved · Profile, plus pushed detail/checkout/account screens), with sign-out switching graphs. Phase 3 uses stub screens. The Fragment flow described below is the **legacy** path, retained but unreachable until Phase 5.
+> **As of plan_8 Phase 4** the app launches into the Compose `ShrineApp` `NavHost`: a `Splash` destination reads `SessionRepository` and routes to the **auth graph** (`Login → Register / ForgotPassword`, `Skip`→guest) or the **main graph** (bottom-bar tabs Home · Search · Cart · Saved · Profile, plus pushed Category, Product detail, Checkout, Order placed/history/detail, Addresses, Payment methods, Edit profile, Settings, Help center), with sign-out switching graphs. Phase 4 replaced the Phase 3 stubs with real MVVM screens (`@HiltViewModel` + `UiState`, each backed by a `:core:data` repository; every screen has empty/loading/error states). The Fragment flow described below is the **legacy** path, retained but unreachable until Phase 5.
 
 `MainActivity.onCreate` adds `LoginFragment` as the first screen. From there:
 

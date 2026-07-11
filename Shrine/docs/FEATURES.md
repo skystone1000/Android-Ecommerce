@@ -10,6 +10,8 @@ This documents the **actually wired-up** user-facing behavior. Each feature list
 
 All paths are relative to `Shrine/`.
 
+> **Modernisation status (plan_8 Phase 4).** The app the user actually runs is now the **Compose** stack: `MainActivity` → `ShrineApp` → per-screen `@Composable` + `@HiltViewModel` (`app/.../ui/screens/`) backed by `:core:data` repositories and the `shrine.db` Room database. Every figma screen is implemented (Splash, Login/Register/Forgot, Home, Category, Search, Product detail, Cart, Checkout, Order placed/history/detail, Wishlist, Profile, Edit profile, Settings, Addresses, Payment methods, Help center) with empty/loading/error states. The per-feature sections below still describe the **legacy Fragment/XML** implementation (`contactDB`, `fragments/`, RecyclerView adapters); those classes compile but are no longer launched and are deleted in Phase 5. The automated test matrix (per-screen ViewModel + Compose UI tests) is consolidated in Phase 7.
+
 ---
 
 ## 1. Registration (sign up)

@@ -1,8 +1,8 @@
 ---
 title: Modernisation — Compose + Jetpack rewrite
 status: active
-last_updated: 2026-06-28
-scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set.
+last_updated: 2026-06-29
+scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–4 implemented (build verified); Phases 5–7 pending.
 ---
 
 # Plan — Modernisation to Compose + Jetpack
@@ -174,6 +174,8 @@ Each screen = stateless `Screen` + `@HiltViewModel` + `UiState` + events, wired 
 | 16 | **Payment methods** | PaymentRepository | new — list/add/select masked cards (reached from Profile & Checkout "Change") |
 
 Every screen ships with empty/loading/error states (closes B23 permanently) and a Compose UI test + ViewModel unit test. Screens 15–16 are lightweight CRUD over local data; **Help center** and **Track order** are static placeholder destinations (see coverage map). Screen numbers here sequence work and do not change the figma-aligned 15-screen design set (Splash + 14) — addresses/payment-methods are the management screens behind Checkout's "Change" affordances.
+
+> **Status (2026-06-29):** all 17 screens (0–16) are implemented as stateless `@Composable` + `@HiltViewModel` + `UiState`, wired to `:core:data` repositories, replacing the Phase 3 stubs in `app/.../ui/screens/`; each carries empty/loading/error states. `ShrineApp` now routes to the real screens and the root `ShrineTheme` honors the Settings theme preference. `assembleDebug` verified green. The **per-screen automated test matrix** (ViewModel unit + Compose UI tests) is **deferred to Phase 7 — Quality gates** to keep this phase's diff focused on the migration; the design-system Robolectric repository tests from Phase 2 remain green.
 
 ### Phase 5 — Delete legacy
 - Remove all Fragments, XML layouts, RecyclerView adapters, `NavigationHost`, `NavigationIconClickListener`, `ImageRequester`/Volley, per-Activity `SharedPreferences` usage.

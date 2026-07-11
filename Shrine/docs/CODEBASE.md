@@ -37,11 +37,29 @@ Shrine/
         │   ├── AndroidManifest.xml         # Permissions, Application, MainActivity (LAUNCHER)
         │   ├── java/com/google/codelabs/mdc/kotlin/shrine/
         │   │   ├── MainActivity.kt             # Phase 3: ComponentActivity → setContent { ShrineApp() }
-        │   │   ├── ui/                          # Phase 3 Compose entry point
-        │   │   │   ├── ShrineApp.kt             #   NavHost (auth/main graphs) + bottom-bar Scaffold
-        │   │   │   ├── AppViewModel.kt          #   session gate (Splash→Auth/Main), sign-in/guest/out
+        │   │   ├── ui/                          # Compose entry point (Phase 3 nav skeleton + Phase 4 screens)
+        │   │   │   ├── ShrineApp.kt             #   NavHost (auth/main graphs) + bottom-bar Scaffold; theme from settings
+        │   │   │   ├── AppViewModel.kt          #   session gate (Splash→Auth/Main), theme preference, sign-out
+        │   │   │   ├── UiHelpers.kt             #   category-icon map, initials, greeting, session scopeId
         │   │   │   ├── navigation/Routes.kt     #   @Serializable type-safe destinations
-        │   │   │   └── screens/SkeletonScreens.kt  # StubScreen + SplashScreen (replaced in Phase 4)
+        │   │   │   └── screens/                 #   Phase 4: stateless XxxContent + @HiltViewModel + UiState + @Preview per destination
+        │   │   │       ├── PreviewData.kt       #     static sample entities for @Preview (no Hilt/DB)
+        │   │   │       ├── AuthScreens.kt       #     Login / Register / ForgotPassword (Auth + Session)
+        │   │   │       ├── HomeScreen.kt        #     greeting, hero promo, category tiles, product grid
+        │   │   │       ├── CategoryScreen.kt    #     products by category + sort + result count
+        │   │   │       ├── SearchScreen.kt      #     live results, recent searches, filter bottom-sheet
+        │   │   │       ├── ProductDetailScreen.kt #   image pager, variants, wishlist, related, add-to-cart
+        │   │   │       ├── CartScreen.kt        #     steppers, summary, sticky checkout
+        │   │   │       ├── CheckoutScreen.kt    #     address, delivery options, payment, place order
+        │   │   │       ├── OrderScreens.kt      #     OrderPlaced / OrderHistory (status tabs) / OrderDetail
+        │   │   │       ├── WishlistScreen.kt    #     saved grid, quick-add, remove
+        │   │   │       ├── ProfileScreen.kt     #     avatar + stats + nav rows + sign out
+        │   │   │       ├── EditProfileScreen.kt #     name/email/phone/DOB (DatePicker), save
+        │   │   │       ├── SettingsScreen.kt    #     theme segmented control, switches, about
+        │   │   │       ├── AddressesScreen.kt   #     CRUD over AddressRepository
+        │   │   │       ├── PaymentMethodsScreen.kt # CRUD over PaymentRepository (masked cards)
+        │   │   │       ├── HelpCenterScreen.kt  #     static placeholder
+        │   │   │       └── SkeletonScreens.kt   #     SplashScreen (Phase 3 stubs removed)
         │   │   ├── NavigationHost.kt           # navigateTo(...) interface — LEGACY (unused, deleted Phase 5)
         │   │   ├── NavigationIconClickListener.kt  # Backdrop reveal animation — LEGACY
         │   │   ├── application/
