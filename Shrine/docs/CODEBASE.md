@@ -1,6 +1,6 @@
 ---
 title: Codebase Map
-last_updated: 2026-06-28
+last_updated: 2026-06-29
 scope: Directory tree, module responsibilities, entry points, build/run commands, conventions, and "where to look" recipes.
 ---
 
@@ -30,7 +30,7 @@ Shrine/
 │   └── data/                    # Phase 2: repositories, Session/Settings (DataStore), PasswordHasher, Hilt modules
 │       └── src/test/            # Robolectric repository tests (in-memory Room) — Phase 2 exit gate
 └── app/
-    ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Room via KSP, Hilt, Compose, Coil, DataStore, Nav-Compose, Volley, Gson, coroutines)
+    ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Hilt+KSP, Compose, Coil, DataStore, Nav-Compose, coroutines, Material window theme). No Room/Volley/Gson/Fragment (removed Phase 5)
     ├── proguard-rules.pro       # ProGuard rules (release; minify disabled)
     └── src/
         ├── main/
@@ -60,57 +60,23 @@ Shrine/
         │   │   │       ├── PaymentMethodsScreen.kt # CRUD over PaymentRepository (masked cards)
         │   │   │       ├── HelpCenterScreen.kt  #     static placeholder
         │   │   │       └── SkeletonScreens.kt   #     SplashScreen (Phase 3 stubs removed)
-        │   │   ├── NavigationHost.kt           # navigateTo(...) interface — LEGACY (unused, deleted Phase 5)
-        │   │   ├── NavigationIconClickListener.kt  # Backdrop reveal animation — LEGACY
-        │   │   ├── application/
-        │   │   │   └── ShrineApplication.kt     # Application subclass (@HiltAndroidApp), static instance
-        │   │   ├── auth/
-        │   │   │   └── PasswordHasher.kt         # Salted PBKDF2 — LEGACY (ported to :core:data)
-        │   │   ├── fragments/                   # One file per screen — LEGACY (see below)
-        │   │   ├── adapters/
-        │   │   │   ├── lineargridlayout/        # Regular-grid RecyclerView adapters
-        │   │   │   └── staggeredgridlayout/     # Staggered-grid adapter (used when the setting is on)
-        │   │   ├── database/                    # Room @Database + @Dao interfaces
-        │   │   ├── models/                      # Room @Entity data classes
-        │   │   └── network/                     # ImageRequester (Volley image loading)
+        │   │   └── application/
+        │   │       └── ShrineApplication.kt     # Application subclass (@HiltAndroidApp) — bare shell
         │   └── res/
-        │       ├── layout/        # XML screens & list-item layouts (shr_*.xml)
-        │       ├── drawable/ + drawable-v24/   # Vectors, icons, animated-vector "done"
-        │       ├── menu/shr_toolbar_menu.xml   # Toolbar settings + cart icons
+        │       ├── drawable/ + drawable-v24/   # Launcher background/foreground only
         │       ├── mipmap-*/      # Launcher icons
-        │       ├── animator/      # Button state-list animator
-        │       ├── raw/products.json           # Product catalog seed (loaded by ProductSeed)
-        │       └── values/        # colors.xml, dimens.xml, strings.xml, styles.xml
+        │       └── values/        # colors.xml, dimens.xml, strings.xml, styles.xml (Theme.Shrine window theme)
         ├── test/                  # ExampleUnitTest.kt (template only)
         └── androidTest/           # ExampleInstrumentedTest.kt (template only)
 ```
 
-### `fragments/` — one fragment per screen
-
-| File | Screen | Notes |
-|------|--------|-------|
-| `LoginFragment.kt` | Login | "Username" field is matched against `user_email`. |
-| `RegisterFragment.kt` | Sign-up | Validates 6 fields + password rules, inserts a `User`. |
-| `ProductGridFragment.kt` | Product catalog | Hosts the toolbar/backdrop; hardcoded product list. |
-| `CartFragment.kt` | Cart | Loads + regroups cart rows; clear/checkout. |
-| `OrderPlacedFragment.kt` | Order confirmation | Animated "done" check; continue shopping. |
-| `ProfileFragment.kt` | Profile | Reads session from `SharedPreferences`; sign-out. |
-| `SettingsFragment.kt` | Settings | Toggle for staggered vs regular product grid; persists to `shrine_settings` prefs. |
-
-### `database/`, `models/`, `adapters/`, `network/`
-
-- **`models/`**: `User` (`users` table; stores `user_pass_hash` + `user_pass_salt`, with a unique index on `user_email`), `CartItem` (`cart` table; carries `user_id` so the cart is per-user, plus a real `product_quantity`), `Product` (`products` table). All are Room `@Entity` data classes with an auto-generated primary key.
-- **`database/`**: `ShrineDatabase` (singleton, db file `contactDB`, **version 3**, `fallbackToDestructiveMigration`). `UserDAO` (insert/getLogin), `CartItemDAO` (insert/update/findItem/getAll/clearCart/deleteCartItem — all cart queries scoped by `user_id`), `CartOps.addOrIncrement` (upsert that increments quantity), `ProductDAO` (insertAll/getAll/count — backs the product grid), and `ProductSeed` (parses `res/raw/products.json` to seed the `products` table on first run).
-- **`adapters/lineargridlayout/`**: `ProductCardRecyclerViewAdapter` (grid of products → tap adds to cart) and `CartRecyclerViewAdapter` (cart rows → tap remove deletes item). **Active.**
-- **`adapters/staggeredgridlayout/`**: `StaggeredProductCardRecyclerViewAdapter` + `StaggeredProductCardViewHolder`. **Active** — used by `ProductGridFragment` when the "Staggered product grid" setting is on (asymmetric layout, `Product`-backed, with add-to-cart).
-- **`network/`**: `ImageRequester` (Volley image loading; **active**, used by the adapters).
-- **`auth/`**: `PasswordHasher` (salted PBKDF2 hashing/verification for login + registration) and `Session` (reads the logged-in `user_id` from session prefs to scope the cart).
+> **Phase 5 (2026-06-29) deleted the entire legacy stack** from `:app`: `fragments/`, `adapters/` (linear + staggered RecyclerView), `database/` (the app-local Room DB `contactDB` + DAOs + `ProductSeed`), `models/` (`User`/`CartItem`/`Product` entities), `network/ImageRequester` (Volley), `auth/` (`PasswordHasher` + `Session`), `NavigationHost.kt`, `NavigationIconClickListener.kt`, every `res/layout/*`, `res/menu/`, `res/animator/`, `res/raw/products.json`, and all legacy `shr_*` drawables. The catalog/auth/cart logic and data now live in `:core:data` + `:core:database` + `:core:model`; the only `:app` Kotlin left is `MainActivity`, `ShrineApplication`, and the Compose `ui/` package.
 
 ## Entry points
 
-1. **Process:** `ShrineApplication.onCreate` (manifest `android:name`; `@HiltAndroidApp`).
-2. **UI:** `MainActivity` — the `LAUNCHER` activity. As of plan_8 Phase 3, `onCreate` calls `setContent { ShrineApp() }` (Compose); it no longer inflates a layout or adds Fragments.
-3. **First screen seen by the user:** the Compose `Splash` destination in `ShrineApp`, which routes to `Login` (no session) or `Home` (session/guest). *(Legacy: `LoginFragment` — no longer launched.)*
+1. **Process:** `ShrineApplication` (manifest `android:name`; `@HiltAndroidApp`) — a bare Hilt shell.
+2. **UI:** `MainActivity` — the `LAUNCHER` activity; `onCreate` calls `setContent { ShrineApp() }` (Compose).
+3. **First screen seen by the user:** the Compose `Splash` destination in `ShrineApp`, which routes to `Login` (no session) or `Home` (session/guest).
 
 ## Build & run commands
 
@@ -140,27 +106,26 @@ The APK's application id and launch component is `com.google.codelabs.mdc.kotlin
 
 ## Naming & code conventions
 
-- **Package:** everything is under `com.google.codelabs.mdc.kotlin.shrine` (the namespace set in `app/build.gradle`).
-- **Resource prefix:** most XML resources use the `shr_` prefix (`shr_login_fragment.xml`, `shr_toolbar_menu.xml`, `Theme.Shrine`, `Widget.Shrine.*`). Some newer additions do not (e.g. `baseline_shopping_cart_24.xml`, `delete_24.xml`).
-- **Layout ↔ view IDs:** views are accessed with `findViewById(R.id.<snake_case_id>)`. (This project was migrated off `kotlin-android-extensions` synthetics; do **not** reintroduce `kotlinx.android.synthetic` imports — they are removed in Kotlin 1.9.)
-- **Models:** entity fields use `snake_case` (e.g. `user_email`, `product_price`) to match column names.
-- **Async:** DB calls use Kotlin coroutines scoped to a lifecycle — `viewLifecycleOwner.lifecycleScope` in fragments, `(context as AppCompatActivity).lifecycleScope` in adapters — with `withContext(Dispatchers.IO)` for the DB work. Do not use `GlobalScope` (none remains).
-- **Styles/theme:** Material Components light theme `Theme.Shrine` (`styles.xml`); palette in `colors.xml` (primary `#E0E0E0`, accent/pink `#FEDBD0`, text `#442C2E`).
+- **Package:** everything is under `com.google.codelabs.mdc.kotlin.shrine` (the namespace set in `app/build.gradle`; renamed to `com.skystone1000.shrine` in Phase 6).
+- **Resource prefix:** the only `shr_`-prefixed resource still present is `Theme.Shrine` (`styles.xml`) + `shr_app_name`/other strings; the `shr_*.xml` layouts/menus/drawables were removed in Phase 5. New UI is Compose and carries no XML resources.
+- **UI:** screens are stateless `@Composable`s in `ui/screens/` (`findViewById`/`kotlinx.android.synthetic` no longer apply — there are no XML views in `:app`).
+- **Models:** entity fields use `snake_case` (e.g. `user_email`, `product_price`) to match column names; entities now live in `:core:model`.
+- **Async:** Coroutines + Flow end-to-end; ViewModels use `viewModelScope`, repositories own `withContext(Dispatchers.IO)`. Do not use `GlobalScope`.
+- **Styles/theme:** the app **window** theme is the Material Components `Theme.Shrine` (`styles.xml`), used only as the Activity background before Compose draws; the live in-app theme is the Compose `ShrineTheme` (`:core:designsystem`). Legacy palette in `colors.xml`.
 
 ## Where to look to do common tasks
 
 | Task | Start here |
 |------|-----------|
-| Add/modify a screen | Create a `Fragment` in `fragments/` + a `shr_*.xml` layout; navigate via `navigateTo(...)`. |
-| Change navigation between screens | The `navigateTo(...)` call sites in fragments/adapters; `MainActivity.navigateTo`. |
-| Add a DB table/query | Add an `@Entity` in `models/`, a DAO in `database/`, register both in `ShrineDatabase` (and bump `version`). |
-| Change the product catalog | `res/raw/products.json` (seed data) → loaded by `ProductSeed` into the `products` table; read in `ProductGridFragment.loadCatalog()` via `ProductDAO`. |
-| Change cart logic/totals | `CartFragment` (load + regroup + totals) and `CartRecyclerViewAdapter` (per-row remove). |
-| Change login/registration rules | `LoginFragment.isPasswordValid` / `login`; `RegisterFragment.check` / `userRegister`. Password hashing lives in `auth/PasswordHasher`. |
-| Change product image loading | `network/ImageRequester`. |
-| Change toolbar items | `res/menu/shr_toolbar_menu.xml` + `ProductGridFragment.onCreateOptionsMenu` + `MainActivity.onOptionsItemSelected`. |
-| Change colors/theme/strings | `res/values/colors.xml`, `styles.xml`, `strings.xml`. |
-| Change settings / grid layout toggle | `SettingsFragment` (+ `shr_settings_fragment.xml`); applied in `ProductGridFragment.renderGrid()`. |
+| Add/modify a screen | Add/edit a `XxxScreen.kt` in `app/.../ui/screens/` (stateless `XxxContent` + `@HiltViewModel` + `UiState` + `@Preview`); register the route in `ui/navigation/Routes.kt` + `ui/ShrineApp.kt`. |
+| Change navigation between screens | `ui/ShrineApp.kt` (`NavHost`, type-safe `navigate(...)` calls) and `ui/navigation/Routes.kt`. |
+| Add a DB table/query | Add an `@Entity` in `:core:model`, a DAO in `:core:database`, register both in `ShrineDatabase` (and bump `version`); expose via a repository in `:core:data`. |
+| Change the product catalog | `:core:database` `CatalogSeed` (programmatic seed) → read via `CatalogRepository` in `:core:data`. |
+| Change cart logic/totals | `CartRepository` (`:core:data`) + `ui/screens/CartScreen.kt` (`CartViewModel`). |
+| Change login/registration rules | `AuthRepository` (`:core:data`, hashing via ported `PasswordHasher`) + `ui/screens/AuthScreens.kt`. |
+| Change product image loading | Coil in the Compose `ProductCard`/`AsyncImage` (`:core:designsystem`); Volley/`ImageRequester` is gone. |
+| Change colors/theme | Compose tokens in `:core:designsystem` `theme/`; the Activity window theme in `res/values/styles.xml`. |
+| Change settings (theme/density/notifications) | `SettingsRepository` (DataStore, `:core:data`) + `ui/screens/SettingsScreen.kt`. |
 | Change build config / dependencies | `app/build.gradle` (module) and `build.gradle` (root); bump versions in `gradle/libs.versions.toml` (version catalog). |
 
 See [FEATURES.md](FEATURES.md) for end-to-end feature behavior and [ARCHITECTURE.md](ARCHITECTURE.md) for the system design.

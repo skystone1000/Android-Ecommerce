@@ -1,88 +1,78 @@
 ---
 title: Architecture
-last_updated: 2026-06-28
+last_updated: 2026-06-29
 scope: System design, components, data/control flow, dependencies, and key design decisions for the Shrine Android app.
 ---
 
 # Architecture
 
-Shrine is an Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been extended with user authentication and a shopping cart backed by a local Room database. A modernisation to Jetpack Compose is in progress (see [plan_8_modernise.md](plan_8_modernise.md)); new modules (`:core:designsystem`, `:core:model`, `:core:database`, `:core:data`) exist alongside the original `:app`, which still hosts the live Fragment/XML UI.
+Shrine is an Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been rebuilt onto a modern Jetpack stack (see [plan_8_modernise.md](plan_8_modernise.md)): 100% Jetpack Compose UI + MVVM + Hilt over a repository layer on Room + DataStore. As of plan_8 **Phase 5** the original Fragment/XML/Volley stack has been **deleted** — `:app` now contains only the Compose entry point and the `:core:*` modules hold the design system, model, database, and data layers.
 
 > All paths below are relative to the `Shrine/` project directory unless noted.
 
 ## High-level shape
 
-- **Gradle modules:** `:app`, `:core:designsystem`, `:core:model`, `:core:database`, `:core:data` (see [settings.gradle](../settings.gradle)). As of plan_8 Phase 3 the `:app` Compose entry point (`ui/`) consumes `:core:designsystem` and `:core:data`. The legacy `models/`, `database/`, `auth/`, and `network/` packages in `:app` (plus the Fragments/XML) are no longer launched but remain compilable until Phase 5 deletes them.
-- **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity`. As of plan_8 Phase 3 it is a `ComponentActivity` (`@AndroidEntryPoint`) that `setContent { ShrineApp() }` — a 100% Compose host. The previous Fragment-in-`FrameLayout` approach (`shr_main_activity.xml`, `R.id.container`) is legacy and unreachable pending Phase 5.
-- **Navigation:** [`ShrineApp`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/ShrineApp.kt) hosts a **Navigation-Compose** `NavHost` with type-safe routes (kotlinx-serialization, see `ui/navigation/Routes.kt`) split into nested **auth** and **main** graphs, under a bottom-bar `Scaffold`. The legacy [`NavigationHost`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationHost.kt) interface + `supportFragmentManager` transactions are dead code until Phase 5.
-- **Local persistence:** a Room database named `contactDB` (version 3, [`ShrineDatabase`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ShrineDatabase.kt)) stores users, products, and per-user cart items.
-- **Session state:** the logged-in user's details are cached in `SharedPreferences` (per-Activity `getPreferences(MODE_PRIVATE)`), not in the database.
+- **Gradle modules:** `:app`, `:core:designsystem`, `:core:model`, `:core:database`, `:core:data` (see [settings.gradle](../settings.gradle)). The `:app` Compose entry point (`ui/`) consumes `:core:designsystem` + `:core:data` (+ `:core:model`). After Phase 5 there is **no** legacy `models/`/`database/`/`auth/`/`network/`/`fragments/`/`adapters/` package in `:app` — that logic lives in the `:core:*` modules.
+- **Single-Activity architecture:** [`MainActivity`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/MainActivity.kt) is the only `Activity` — a `ComponentActivity` (`@AndroidEntryPoint`) that `setContent { ShrineApp() }`, a 100% Compose host. No XML layouts remain.
+- **Navigation:** [`ShrineApp`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/ShrineApp.kt) hosts a **Navigation-Compose** `NavHost` with type-safe routes (kotlinx-serialization, see `ui/navigation/Routes.kt`) split into nested **auth** and **main** graphs, under a bottom-bar `Scaffold`.
+- **Local persistence:** a Room database named **`shrine.db`** ([`ShrineDatabase`](../core/database/src/main/java/com/google/codelabs/mdc/kotlin/shrine/core/database/ShrineDatabase.kt) in `:core:database`) stores users, catalog (products/categories/promotions), per-user cart/wishlist/orders, addresses, payment methods, and recent searches, behind the `:core:data` repositories.
+- **Session & settings state:** held in **DataStore Preferences** (`SessionRepository`, `SettingsRepository` in `:core:data`), not `SharedPreferences`.
 
 ## Major components
 
 | Component | Type | Responsibility |
 |-----------|------|----------------|
-| `ShrineApplication` | `Application` (`@HiltAndroidApp`) | Process entry point. Holds a static `instance` and enables vector-drawable support. Annotated `@HiltAndroidApp` (Hilt DI root, added in plan_8 Phase 0). Registered in the manifest as `android:name`. |
-| `MainActivity` | `ComponentActivity` (`@AndroidEntryPoint`) | Compose host (Phase 3): `setContent { ShrineApp() }`. (Previously an `AppCompatActivity` + `NavigationHost` that hosted Fragments — now legacy/unreachable.) |
-| `ShrineApp` (`ui/`) | `@Composable` | Root Compose UI: `ShrineTheme` (theme honors `SettingsRepository`) + `NavHost` (auth/main nested graphs, type-safe routes) + bottom-bar `Scaffold`. As of Phase 4 every destination is a real screen (`ui/screens/`), each a stateless `@Composable` + `@HiltViewModel` + `UiState` wired to a `:core:data` repository. `AppViewModel` drives the Splash → Auth/Main gate from `SessionRepository` and exposes the theme + sign-out. |
-| `NavigationHost` | interface | Contract for "navigate to fragment (optionally add to back stack)". Decouples fragments/adapters from `MainActivity`. |
-| Fragments (`fragments/`) | UI screens | One fragment per screen: Login, Register, ProductGrid, Cart, OrderPlaced, Profile, Settings. |
-| RecyclerView adapters (`adapters/`) | UI binding | Bind product/cart lists to views and handle item taps (add to cart, remove from cart). |
-| Models (`models/`) | Room `@Entity` data classes | `User`, `CartItem`, `Product` — table row shapes. |
-| DAOs (`database/`) | Room `@Dao` interfaces | `UserDAO`, `CartItemDAO`, `ProductDAO` — database queries. |
-| `ShrineDatabase` | Room `@Database` | Singleton database with the three DAOs. |
-| `ImageRequester` | object | Loads remote product images over HTTP via Volley, with an in-memory `LruCache`. |
-| `PasswordHasher` (`auth/`) | object | Salted PBKDF2 hashing/verification for the local account store. |
-| `NavigationIconClickListener` | `View.OnClickListener` | Animates the product-grid "backdrop" reveal when the toolbar nav icon is tapped. |
+| `ShrineApplication` | `Application` (`@HiltAndroidApp`) | Process entry point and Hilt DI root. A bare shell after Phase 5 (the legacy static `instance` + vector-drawable shim were removed). Registered in the manifest as `android:name`. |
+| `MainActivity` | `ComponentActivity` (`@AndroidEntryPoint`) | Compose host: `setContent { ShrineApp() }`. |
+| `ShrineApp` (`ui/`) | `@Composable` | Root Compose UI: `ShrineTheme` (theme honors `SettingsRepository`) + `NavHost` (auth/main nested graphs, type-safe routes) + bottom-bar `Scaffold`. Every destination is a real screen (`ui/screens/`), each a stateless `XxxContent` + `@HiltViewModel` + `UiState` wired to a `:core:data` repository. `AppViewModel` drives the Splash → Auth/Main gate from `SessionRepository` and exposes the theme + sign-out. |
+| Screen ViewModels (`ui/screens/`) | `@HiltViewModel` | One per screen (Login/Register, Home, Category, Search, ProductDetail, Cart, Checkout, Order*, Wishlist, Profile, EditProfile, Settings, Addresses, PaymentMethods). Expose an immutable `UiState` `StateFlow`; read type-safe nav args via `SavedStateHandle.toRoute<T>()`; scope per-user data by session `userId` (guests use `-1`). |
+| Repositories (`:core:data`) | interfaces + impls | `Auth`, `Catalog`, `Cart`, `Order`, `Wishlist`, `Promotion`, `Search`, `Address`, `Payment`, plus DataStore-backed `Session` + `Settings`. Own the data sources; expose `Flow`s + suspend functions. |
+| `ShrineDatabase` (`:core:database`) | Room `@Database` | Singleton (`shrine.db`) with all DAOs + kotlinx-serialization `Converters` + `CatalogSeed`. KSP-processed. |
+| `PasswordHasher` (`:core:data`) | object | Salted PBKDF2 hashing/verification (ported from the legacy `auth/` package). |
 
 ## Control flow (navigation graph)
 
-> **As of plan_8 Phase 4** the app launches into the Compose `ShrineApp` `NavHost`: a `Splash` destination reads `SessionRepository` and routes to the **auth graph** (`Login → Register / ForgotPassword`, `Skip`→guest) or the **main graph** (bottom-bar tabs Home · Search · Cart · Saved · Profile, plus pushed Category, Product detail, Checkout, Order placed/history/detail, Addresses, Payment methods, Edit profile, Settings, Help center), with sign-out switching graphs. Phase 4 replaced the Phase 3 stubs with real MVVM screens (`@HiltViewModel` + `UiState`, each backed by a `:core:data` repository; every screen has empty/loading/error states). The Fragment flow described below is the **legacy** path, retained but unreachable until Phase 5.
-
-`MainActivity.onCreate` adds `LoginFragment` as the first screen. From there:
+The app launches into the Compose `ShrineApp` `NavHost`: a `Splash` destination reads `SessionRepository` and routes to the **auth graph** or the **main graph**.
 
 ```
-LoginFragment ──register──▶ RegisterFragment ──(on submit)──▶ LoginFragment
-LoginFragment ──(valid login)──▶ ProductGridFragment
-ProductGridFragment ──profile button──▶ ProfileFragment
-ProductGridFragment ──toolbar cart icon──▶ CartFragment   (via MainActivity options menu)
-ProductGridFragment ──toolbar settings icon──▶ SettingsFragment   (via MainActivity options menu)
-CartFragment ──checkout / clear──▶ OrderPlacedFragment / CartFragment
-OrderPlacedFragment ──continue shopping──▶ ProductGridFragment
-ProfileFragment ──sign out──▶ restart MainActivity (clears task → LoginFragment)
+Splash ──no session──▶ AuthGraph:  Login ⇄ Register / ForgotPassword,  Login "Skip" ──▶ MainGraph (guest, userId = -1)
+Splash ──session/guest──▶ MainGraph (bottom-bar Scaffold)
+
+MainGraph bottom tabs:  Home · Search · Cart · Saved · Profile
+  Home   ──▶ Category ──▶ ProductDetail ──▶ Cart
+  Search ──▶ ProductDetail
+  Cart   ──▶ Checkout ──▶ OrderPlaced ──▶ OrderHistory ──▶ OrderDetail
+  Saved  ──▶ ProductDetail
+  Profile──▶ OrderHistory / Addresses / PaymentMethods / EditProfile / Settings / HelpCenter
+  Profile "Sign out" ──▶ AuthGraph (back stack cleared via popUpTo)
 ```
 
-Each hop calls `(<host> as NavigationHost).navigateTo(fragment, addToBackstack)` which runs `supportFragmentManager.beginTransaction().replace(R.id.container, fragment)` and optionally `addToBackStack`.
+Navigation is type-safe: routes are `@Serializable` data classes/objects in `ui/navigation/Routes.kt`; sign-out/sign-in switch graphs with `popUpTo` rather than restarting the Activity.
 
 ## Data flow
 
-1. **Authentication.** `RegisterFragment` hashes the password (salted PBKDF2 via `PasswordHasher`) and writes a `User` row (`user_pass_hash` + `user_pass_salt`) via `UserDAO.insertUser`, rejecting duplicate emails. `LoginFragment` reads the user back with `UserDAO.getLogin(email)`, recomputes the hash of the entered password, and compares it to the stored hash. On success it caches `user_id`, `user_name`, `user_email`, `user_phone` in `SharedPreferences`.
-2. **Catalog.** `ProductGridFragment` loads the catalog from the Room `products` table via `ProductDAO`, seeding it from `res/raw/products.json` (`ProductSeed`) on first run, and passes it to `ProductCardRecyclerViewAdapter`. Product images are attempted by URL through `ImageRequester`, falling back to a bundled `shr_logo` placeholder.
-3. **Cart.** The cart is **scoped to the logged-in user** (`cart.user_id`, read from the session via `auth/Session`). Tapping a product card calls `CartItemDAO.addOrIncrement(userId, product)`: the first tap inserts a `CartItem` (quantity `"1"`), later taps increment that product's `product_quantity` — so the table holds **one row per product per user**. `CartFragment` loads the current user's rows with `CartItemDAO.getAll(userId)` and renders count + total price (currency-safe parsing); remove/clear/checkout are also user-scoped.
-4. **Profile/session.** `ProfileFragment` reads the cached user fields from `SharedPreferences`. Sign-out clears those preferences and restarts the Activity.
+Compose never touches Room/DataStore directly — screens render a `UiState`, ViewModels call repositories, repositories own the data sources and expose `Flow`s + suspend functions. `UiState` is immutable; screens are stateless and hoisted.
+
+1. **Authentication.** `AuthRepository.register` hashes the password (salted PBKDF2 via `PasswordHasher`) and writes a `UserEntity` (`user_pass_hash` + `user_pass_salt`), rejecting duplicate emails; `login` reads the user back, recomputes the hash, and compares. On success the `LoginViewModel` calls `SessionRepository.signIn(...)` (DataStore). Login's **Skip** enters the main graph as a guest (`userId = -1`).
+2. **Catalog.** `CatalogRepository` serves products/categories/promotions from `shrine.db`, seeded in-code by `CatalogSeed` on first run; Compose `ProductCard` loads images with Coil. Home/Category/Search ViewModels combine catalog + session + wishlist flows into their `UiState`.
+3. **Cart & wishlist.** Both are **scoped to the session `userId`** (guests use `-1`). `CartRepository.addOrIncrement` upserts one row per product+variant per user; `CartViewModel` exposes lines + totals (integer-cent math) and quantity steppers. Wishlist toggles (`WishlistRepository`) drive the filled/outlined heart on catalog cards and the Saved tab reactively.
+4. **Checkout & orders.** `CheckoutViewModel` combines address/delivery/payment/cart flows; `OrderRepository.placeOrder` persists an `OrderEntity` (+ `OrderLineEntity` snapshots) with an order number/status, which drives OrderPlaced and the OrderHistory status tabs.
+5. **Profile/session/settings.** `ProfileViewModel` reads the session + order/saved counts; `SettingsRepository` (DataStore) holds theme/density/notification prefs, with the theme honored at the `ShrineTheme` root. Sign-out clears the session and switches graphs.
 
 ## External dependencies & integrations
 
 Declared in [app/build.gradle](../app/build.gradle); all versions are centralised in the **Gradle version catalog** [gradle/libs.versions.toml](../gradle/libs.versions.toml) (added in plan_8 Phase 0).
 
-| Dependency | Version | Used for |
-|------------|---------|----------|
-| Material Components (`com.google.android.material`) | 1.6.0 | Theming, `TextInputLayout`, `MaterialButton`, toolbar, cards. |
-| AndroidX Room (`room-runtime`, `room-ktx`, `room-compiler`) | 2.6.1 | Local SQLite persistence + DAOs (**KSP** annotation processing). |
-| Kotlin Coroutines (`coroutines-core`, `coroutines-android`) | 1.9.0 | Off-main-thread DB calls. |
-| Volley (`com.android.volley`) | 1.2.1 | `ImageRequester` HTTP image loading (to be replaced by Coil in plan_8 Phase 2). |
-| Gson (`com.google.code.gson`) | 2.9.0 | JSON parsing of the bundled catalog in `ProductSeed` (seeds the `products` table). |
-
-**Modernisation scaffolding (plan_8 Phase 0 — present but not yet wired into the live Fragment/XML UI):** Hilt (`hilt-android` 2.52, `hilt-navigation-compose` 1.2.0), Jetpack Compose (`compose-bom` 2024.12.01 → `ui`/`material3`, `activity-compose`, `lifecycle-viewmodel-compose` 2.8.7), Navigation-Compose 2.8.4, DataStore Preferences 1.1.1, Coil 3.0.4 (`coil-compose` + `coil-network-okhttp`), and `kotlinx-serialization-json` 1.7.3. The legacy `androidx.legacy:legacy-support-v4` dependency was **removed** (minSdk raised to 24).
+**`:app` dependencies (post-Phase-5):** Hilt (`hilt-android` 2.52, `hilt-navigation-compose` 1.2.0; KSP-processed), Jetpack Compose (`compose-bom` 2024.12.01 → `ui`/`material3`, `activity-compose`, `lifecycle-viewmodel-compose` 2.8.7), Navigation-Compose 2.8.4, DataStore Preferences 1.1.1, Coil 3.0.4 (`coil-compose` + `coil-network-okhttp`), `kotlinx-serialization-json` 1.7.3, Kotlin Coroutines 1.9.0, and the three `:core:*` modules it consumes. Material Components (`com.google.android.material`) is retained **only** to supply the `Theme.Shrine` window theme on the Activity. **Removed in Phase 5:** Room (`room-runtime`/`ktx`/`compiler`), Volley, Gson, and `androidx.fragment:fragment-ktx` — Room now lives only in `:core:database`, and image loading is Coil. (`legacy-support-v4` was already dropped in Phase 0 with the minSdk-24 bump.)
 
 **Design system module (`:core:designsystem`, plan_8 Phase 1).** A standalone `com.android.library` module exposing the Compose UI foundation: `ShrineTheme` (brand light/dark `ColorScheme`, `Typography`, `Shapes`, plus extended success/warning colors and spacing/elevation tokens — dynamic color is deliberately disabled), and the reusable component set (buttons, text/password/search fields, chips, selection controls, product card, price/rating/stepper, app bars, bottom nav, tabs, list rows, feedback dialogs/snackbar, and empty/loading-skeleton/error states). A `@Preview` gallery (`gallery/ComponentGallery.kt`) renders every component in light + dark. Color/type/spacing/shape tokens come 1:1 from the figma design doc.
 
 **Data layer (`:core:model` · `:core:database` · `:core:data`, plan_8 Phase 2).** A clean Room + DataStore stack for the new app, packaged as `com.google.codelabs.mdc.kotlin.shrine.core.*`:
 - `:core:model` — Room `@Entity` classes (`UserEntity`, `ProductEntity`, `CategoryEntity`, `PromotionEntity`, `CartItemEntity`, `OrderEntity`/`OrderLineEntity`, `WishlistItemEntity`, `AddressEntity`, `PaymentMethodEntity`, `RecentSearchEntity`) plus value types (`Variant`, `OrderStatus`, `DeliveryOption`, `ThemePreference`) and the `Money` cents formatter. **Prices are integer cents**, not strings.
 - `:core:database` — `ShrineDatabase` (db file **`shrine.db`**, separate from the legacy `contactDB`), the DAOs, kotlinx-serialization `Converters`, the in-code `CatalogSeed`, and a Hilt `DatabaseModule`. KSP processes Room.
-- `:core:data` — repository interfaces + impls (`Auth`, `Catalog`, `Cart`, `Order`, `Wishlist`, `Promotion`, `Search`, `Address`, `Payment`, plus DataStore-backed `Session` and `Settings`), the ported `PasswordHasher`, and Hilt `DataStoreModule` + `RepositoryModule`. Repositories expose `Flow`s + suspend functions; per-user data is scoped by a `userId` argument. Coil (added in Phase 0) replaces Volley image loading when the Compose screens arrive (Phase 4); the legacy `ImageRequester` stays until Phase 5. Repositories are unit-tested with an in-memory Room DB (Robolectric).
+- `:core:data` — repository interfaces + impls (`Auth`, `Catalog`, `Cart`, `Order`, `Wishlist`, `Promotion`, `Search`, `Address`, `Payment`, plus DataStore-backed `Session` and `Settings`), the ported `PasswordHasher`, and Hilt `DataStoreModule` + `RepositoryModule`. Repositories expose `Flow`s + suspend functions; per-user data is scoped by a `userId` argument (guests use `-1`). Image loading is **Coil** in the Compose layer. Repositories are unit-tested with an in-memory Room DB (Robolectric).
 
-**Network use:** the only outbound network traffic is product-image loading via Volley to `storage.googleapis.com` / other image hosts. The manifest declares `INTERNET` and `ACCESS_NETWORK_STATE` permissions. There is no application backend/API — all app data is local.
+**Network use:** the only outbound network traffic is product-image loading via **Coil** to the catalog's image hosts. The manifest declares `INTERNET` and `ACCESS_NETWORK_STATE` permissions. There is no application backend/API — all app data is local.
 
 ## Build/toolchain architecture
 
@@ -96,21 +86,18 @@ Declared in [app/build.gradle](../app/build.gradle); all versions are centralise
 
 ## Key design decisions (with rationale)
 
-- **Single Activity + Fragments + `NavigationHost` interface.** Inherited from the MDC Shrine codelab. The `NavigationHost` indirection lets fragments and RecyclerView adapters trigger navigation without holding a concrete `MainActivity` reference (they cast the host/context to `NavigationHost`).
-- **Room over raw SQLite.** Compile-time-checked queries and DAO abstraction; chosen when login/register/cart features were added on top of the codelab.
-- **`SharedPreferences` for the session, DB for credentials.** The current user "session" is intentionally lightweight (just cached profile strings) and kept separate from the credential store. Sign-out clears preferences and relaunches the task to reset the back stack.
-- **Backdrop reveal animation via `NavigationIconClickListener`.** A codelab-style Material "backdrop": the product grid sheet translates down on the Y-axis to reveal a menu behind it, toggled by the toolbar nav icon.
-- **`vectorDrawables.useSupportLibrary = true` + `setCompatVectorFromResourcesEnabled(true)`.** Enables vector drawable assets (logo, icons, animated "done" check); originally needed for the old low `minSdk`, retained after the plan_8 Phase 0 bump to `minSdk` 24.
+- **Single-Activity + 100% Compose + Navigation-Compose (type-safe routes).** Replaces the codelab's Fragment/`NavigationHost`/backdrop approach (deleted in Phase 5). Navigation is driven by `@Serializable` routes; no `FragmentManager`.
+- **MVVM + Hilt + unidirectional data flow.** ViewModels expose immutable `UiState` `StateFlow`s; screens are stateless. Layering rule: Compose → ViewModel → repository; nothing else touches Room/DataStore.
+- **Room behind a repository layer (`:core:data`).** Compile-time-checked queries + DAO abstraction, isolated from the UI so screens depend only on repository interfaces. Prices are integer cents.
+- **DataStore for session + settings.** Replaces per-Activity `SharedPreferences`; sign-out clears the session and switches nav graphs (no Activity restart). Per-user data is scoped by `userId` (guests `-1`).
+- **Coil for image loading.** Replaces Volley/`ImageRequester`.
 
 ## Known issues & technical debt
 
 These are accurate observations of the current code, surfaced so docs match reality (do not assume they are intentional design):
 
-- ~~**Fragment transactions from background threads.**~~ _Resolved (plan_1_login + plan_2_cart): all `navigateTo(...)` calls — login, cart clear/checkout, and cart-item removal — now run on the main thread via lifecycle scopes._
-- ~~**`GlobalScope` usage** for DB writes is not lifecycle-aware.~~ _Resolved: every coroutine now uses `viewLifecycleOwner.lifecycleScope` (fragments) or the host activity's `lifecycleScope` (adapters). No `GlobalScope` remains._
-- ~~**Plaintext passwords.**~~ _Resolved (plan_4_security): passwords are stored as salted PBKDF2 hashes (`user_pass_hash` + `user_pass_salt`) and verified by hash; duplicate emails are rejected via a unique index._
-- ~~**Hardcoded catalog.**~~ _Resolved (plan_3_catalog): the catalog is now seeded into the Room `products` table from `res/raw/products.json` and loaded via `ProductDAO`._
-- ~~**Dead code paths.**~~ _Resolved: the staggered-grid adapter became active (plan_6_settings); the `products` table/`ProductDAO`/`products.json` became active (plan_3_catalog); and the last unused class, `network/ProductEntry.kt`, was removed. No dead code paths remain._
-- ~~**Live image URLs may be stale.**~~ _Mitigated (plan_3_catalog): all known product image hosts return 404/000, so cards now render the bundled `shr_logo` placeholder via the `NetworkImageView` default/error image instead of appearing blank._
+- **Per-screen automated tests are deferred.** The Phase 4 migration shipped without the ViewModel-unit / Compose-UI test matrix; it is tracked for **Phase 7 — Quality gates**. The `:core:data` Robolectric repository tests (Phase 2) remain green.
+- **Legacy package name still in place.** Source/`namespace`/`applicationId` are still `com.google.codelabs.mdc.kotlin.shrine`; the rename to `com.skystone1000.shrine` is **Phase 6**.
+- **Product images may not resolve.** The seeded catalog uses placeholder/remote image URLs that may 404; Coil falls back to its placeholder. (Historical resolved items — plaintext passwords, hardcoded catalog, `GlobalScope`, dead code — were fixed in plan_1–plan_7 and then carried into `:core:*`; the Fragment code that hosted them was deleted in Phase 5.)
 
 See [FEATURES.md](FEATURES.md) for per-feature flow and [CODEBASE.md](CODEBASE.md) for the file-by-file map.

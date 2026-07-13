@@ -43,17 +43,8 @@ dependencies {
     implementation project(':core:data')
     implementation project(':core:model')
 
-    // UI (existing XML/Fragment stack — removed in Phase 5)
-    api libs.material
-    implementation libs.androidx.fragment.ktx
-    implementation libs.androidx.lifecycle.runtime.ktx
-    implementation libs.volley
-    implementation libs.gson
-
-    // Room (migrated kapt -> KSP)
-    implementation libs.room.runtime
-    implementation libs.room.ktx
-    ksp libs.room.compiler
+    // Material Components — supplies the Theme.Shrine window theme for the single Activity
+    implementation libs.material
 
     // Coroutines
     implementation libs.coroutines.core

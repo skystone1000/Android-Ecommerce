@@ -2,7 +2,7 @@
 title: Modernisation — Compose + Jetpack rewrite
 status: active
 last_updated: 2026-06-29
-scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–4 implemented (build verified); Phases 5–7 pending.
+scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–5 implemented (build verified — legacy stack deleted); Phases 6–7 pending.
 ---
 
 # Plan — Modernisation to Compose + Jetpack
@@ -180,6 +180,8 @@ Every screen ships with empty/loading/error states (closes B23 permanently) and 
 ### Phase 5 — Delete legacy
 - Remove all Fragments, XML layouts, RecyclerView adapters, `NavigationHost`, `NavigationIconClickListener`, `ImageRequester`/Volley, per-Activity `SharedPreferences` usage.
 - _Exit:_ no `androidx.fragment`/Volley/XML-layout references remain.
+
+> **Status (2026-06-29): done.** Deleted from `:app`: `fragments/`, `adapters/` (linear + staggered), `database/` (legacy `contactDB` Room DB + DAOs + `ProductSeed`), `models/` entities, `network/ImageRequester` (Volley), `auth/` (`PasswordHasher` + `Session`), `NavigationHost.kt`, `NavigationIconClickListener.kt`, all `res/layout/*` + `res/menu/` + `res/animator/` + `res/raw/products.json` + legacy `shr_*` drawables, and the `Widget.Shrine.*` styles (kept only `Theme.Shrine` as the Activity window theme). `ShrineApplication` simplified to a bare `@HiltAndroidApp` shell. `app/build.gradle` dropped Room/Volley/Gson/`fragment-ktx` (Material retained for the window theme). The only surviving `:app` Kotlin is `MainActivity`, `ShrineApplication`, and the Compose `ui/` package. `assembleDebug` verified green; `grep` confirms no `androidx.fragment`/Volley/Gson/Room/`R.layout` references remain in `:app`.
 
 ### Phase 6 — Package & application-id migration
 Rename `com.google.codelabs.mdc.kotlin.shrine*` → `com.skystone1000.shrine*` in one mechanical pass. Done **here**, after Phase 5, because the legacy Fragment code is already gone — so only the surviving Compose modules are renamed, once, over a stable tree.

@@ -1,152 +1,157 @@
 ---
 title: Features
-last_updated: 2026-06-28
+last_updated: 2026-06-29
 scope: Every user-facing feature, what it does, and the end-to-end modules that implement it.
 ---
 
 # Features
 
-This documents the **actually wired-up** user-facing behavior. Each feature lists the modules involved end to end. Dead/unreachable code is called out at the bottom so it is not mistaken for a feature.
+This documents the **actually wired-up** user-facing behavior. Each feature lists the modules involved end to end.
 
 All paths are relative to `Shrine/`.
 
-> **Modernisation status (plan_8 Phase 4).** The app the user actually runs is now the **Compose** stack: `MainActivity` → `ShrineApp` → per-screen `@Composable` + `@HiltViewModel` (`app/.../ui/screens/`) backed by `:core:data` repositories and the `shrine.db` Room database. Every figma screen is implemented (Splash, Login/Register/Forgot, Home, Category, Search, Product detail, Cart, Checkout, Order placed/history/detail, Wishlist, Profile, Edit profile, Settings, Addresses, Payment methods, Help center) with empty/loading/error states. The per-feature sections below still describe the **legacy Fragment/XML** implementation (`contactDB`, `fragments/`, RecyclerView adapters); those classes compile but are no longer launched and are deleted in Phase 5. The automated test matrix (per-screen ViewModel + Compose UI tests) is consolidated in Phase 7.
+> **Stack (plan_8 Phases 0–5).** The app is 100% **Jetpack Compose**: `MainActivity` → [`ShrineApp`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/ShrineApp.kt) → a `NavHost` (auth/main nested graphs, type-safe routes in `ui/navigation/Routes.kt`) under a bottom-bar `Scaffold`. Each screen is a stateless `XxxContent` + a `@HiltViewModel` exposing an immutable `UiState`, in `app/.../ui/screens/`, backed by `:core:data` repositories over the `shrine.db` Room database + DataStore. Every screen carries empty/loading/error states. The legacy Fragment/XML/Volley stack was **deleted in Phase 5**. The per-screen automated test matrix is consolidated in Phase 7.
 
 ---
 
 ## 1. Registration (sign up)
 
-**What it does:** Creates a local user account from name, email, phone, organisation, password, and confirm-password.
+**What it does:** Creates a local user account from name, email, and password (+ a required Terms checkbox), then signs the user in.
 
 **End to end:**
-- UI: [`RegisterFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/RegisterFragment.kt) + layout `res/layout/shr_register_fragment.xml`.
-- Validation (`check()` + `isPasswordValid()`):
-  - All six `TextInputLayout` fields must be non-empty (else field error "Field must not be empty.").
-  - Password and Confirm Password must match (else "Passwords Should Match" + toast).
-  - Password must be ≥ 8 characters (string `shr_error_password`).
-- Duplicate guard: before inserting, `userRegister()` checks `UserDAO.getLogin(email)`; if a user already exists it shows "An account with this email already exists." on the email field and aborts (the `users` table also has a unique index on `user_email`).
-- Persistence: on success (`viewLifecycleOwner.lifecycleScope`), a random salt is generated and the password is hashed with salted PBKDF2 ([`PasswordHasher`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/auth/PasswordHasher.kt)); a `User(0, name, email, phone, organisation, hash, salt)` is inserted via `UserDAO.insertUser` off the main thread.
-- Result: shows a toast "User Registered - Please Login" and navigates back to `LoginFragment`.
+- UI: `RegisterScreen`/`RegisterContent` in [`AuthScreens.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/AuthScreens.kt) — includes a password strength meter and visibility toggle.
+- Validation (`RegisterViewModel`): email must contain `@`, password ≥ 8 chars, Terms & Privacy checkbox required.
+- Persistence: `AuthRepository.register` generates a salt and stores a salted PBKDF2 hash (`user_pass_hash` + `user_pass_salt`), rejecting duplicate emails (unique index on `user_email`). On success it logs in to obtain the `userId` and calls `SessionRepository.signIn(...)`.
 
-**Note:** passwords are stored as salted PBKDF2 hashes (`user_pass_hash` + `user_pass_salt`), never plaintext. See [plan_4_security](plan_4_security.md).
+> Fields follow the figma (name/email/password + terms); phone/DOB are collected later in Edit Profile.
 
 ---
 
 ## 2. Login
 
-**What it does:** Authenticates an existing user and starts a session.
+**What it does:** Authenticates an existing user and starts a session, or enters as a guest.
 
 **End to end:**
-- UI: [`LoginFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/LoginFragment.kt) + `res/layout/shr_login_fragment.xml`.
-- The login field is labeled **"Email"** and is matched against the user's email (`UserDAO.getLogin(email)` queries `WHERE user_email = :email`).
-- Validation before the DB call: email non-empty; password ≥ 8 chars (`isPasswordValid`).
-- Auth: `login()` runs on `viewLifecycleOwner.lifecycleScope`; the DB lookup **and** password verification are done in `withContext(Dispatchers.IO)`, then the result is handled on the main thread. It recomputes the salted PBKDF2 hash of the entered password and compares it to the stored `user_pass_hash`.
-- On success: caches `user_id`, `user_name`, `user_email`, `user_phone` into per-Activity `SharedPreferences`, then navigates to `ProductGridFragment` (on the main thread).
-- On failure (wrong password or unknown email): shows the error "Incorrect email or password." (`shr_error_invalid_credentials`) on the password field; stays on the login screen.
-- Entry to Register: the "Register" button navigates to `RegisterFragment`.
-
-> Implemented by [plan_1_login](plan_1_login.md); hash-based verification added by [plan_4_security](plan_4_security.md).
+- UI: `LoginScreen`/`LoginContent` in [`AuthScreens.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/AuthScreens.kt) — email + password fields, visibility toggle, **Skip** (guest browsing), and a placeholder Forgot password destination.
+- Validation: email non-empty/contains `@`; password ≥ 8 chars.
+- Auth: `AuthRepository.login` looks up the user, recomputes the salted PBKDF2 hash, and compares; on success `LoginViewModel` calls `SessionRepository.signIn(...)`. **Skip** enters the main graph as a guest (`userId = -1`).
+- Navigation: a session/guest sends the user into the main graph; sign-out/sign-in switch graphs via `popUpTo`.
 
 ---
 
-## 3. Product catalog (product grid)
+## 3. Home / catalog
 
-**What it does:** Shows a scrollable 2-column grid of products with image, name, and price.
+**What it does:** A 2-column product grid with a time-based greeting, hero promotion banner, and category tiles.
 
 **End to end:**
-- UI: [`ProductGridFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/ProductGridFragment.kt) + `res/layout/shr_product_grid_fragment.xml` (which `<include>`s `shr_backdrop.xml`).
-- Data: loaded from the Room **`products` table** via `ProductDAO.getAll()`. On first run the table is empty, so `loadCatalog()` seeds it from the bundled `res/raw/products.json` ([`ProductSeed.read`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/ProductSeed.kt), Gson) using `ProductDAO.insertAll(...)`. The load runs on `viewLifecycleOwner.lifecycleScope` (`withContext(Dispatchers.IO)`), then publishes to the adapter via `adapter.submit(...)` on the main thread.
-- List rendering: `RecyclerView` with `GridLayoutManager(span = 2)` and [`ProductCardRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/lineargridlayout/ProductCardRecyclerViewAdapter.kt) inflating `res/layout/shr_product_card.xml`.
-- Images: each card attempts to load its `product_url` via [`ImageRequester`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/network/ImageRequester.kt) (Volley + `LruCache`), with the `shr_logo` drawable set as the `NetworkImageView` default/error image so cards always show a branded placeholder (the seed data ships empty URLs, since no working product image host is available).
-- Toolbar: `ProductGridFragment` sets the support action bar to the included toolbar and inflates `res/menu/shr_toolbar_menu.xml` (cart icon).
-
-> Made data-driven by [plan_3_catalog](plan_3_catalog.md): the catalog was previously a hardcoded inline list with dead image URLs (B11) and `PrductDAO` queried the wrong table (B8).
+- UI: `HomeScreen`/`HomeContent` in [`HomeScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/HomeScreen.kt).
+- Data: `HomeViewModel` combines flows from `CatalogRepository` (products + categories), `PromotionRepository` (hero banner), `CartRepository` (cart-count badge), `SessionRepository` (greeting/name), `SettingsRepository` (grid density), and `WishlistRepository` (`wishlistedIds`).
+- Images load via Coil. Tapping a category tile → `Category`; a product → `ProductDetail`. The wishlist heart on each card toggles via `setWishlisted(productId, checked)`.
 
 ---
 
-## 4. Backdrop reveal (toolbar navigation icon)
+## 4. Category
 
-**What it does:** Tapping the toolbar navigation icon slides the product grid sheet down to reveal a backdrop menu, and swaps the icon between "menu" and "close". Tapping again slides it back.
+**What it does:** Products filtered to one category, with a result count and a Sort control.
 
 **End to end:**
-- [`NavigationIconClickListener`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/NavigationIconClickListener.kt) animates the sheet's `translationY` (duration 500ms) using `R.dimen.shr_product_grid_reveal_height`.
-- Wired in `ProductGridFragment.onCreateView` via `appBar.setNavigationOnClickListener(...)`, with open/close icons `shr_branded_menu` / `shr_close_menu`.
+- UI: `CategoryScreen`/`CategoryContent` in [`CategoryScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/CategoryScreen.kt).
+- `CategoryViewModel` reads the `Category(id)` nav arg via `SavedStateHandle.toRoute<>()`, combines `CatalogRepository.productsByCategory` with a `SortOption` (Featured / Price ↑ / Price ↓ / Top rated) and `wishlistedIds`.
 
 ---
 
-## 5. Add to cart
+## 5. Search
 
-**What it does:** Tapping a product card adds that product to the cart.
+**What it does:** Live search with recent searches/suggestions and a filter bottom sheet.
 
 **End to end:**
-- `ProductCardRecyclerViewAdapter.onBindViewHolder` (and the staggered adapter): the card's `onClickListener` calls `CartItemDAO.addOrIncrement(userId, product)` ([`database/CartOps.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/database/CartOps.kt)) off the main thread on the host activity's `lifecycleScope`, and shows a toast "Item: <name> added to cart".
-- The cart keeps **one row per product per user**: the first tap inserts a `CartItem(0, userId, …, "1")`; subsequent taps increment that row's `product_quantity` instead of inserting a duplicate. `userId` comes from the session via [`auth/Session`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/auth/Session.kt).
-
-> Per-user scoping + quantity upsert added by [plan_7_appwide](plan_7_appwide.md) (B15, B20).
+- UI: `SearchScreen`/`SearchContent` + `FilterSheet` in [`SearchScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/SearchScreen.kt).
+- `SearchViewModel` combines the query, recent searches, filters (price `RangeSlider`, min rating, sort), and `wishlistedIds`; `SearchRepository` serves results + recent-search history (`recordCurrent`/`clearRecent`). The filter sheet shows a live "Show N results" count and Reset.
 
 ---
 
-## 6. Cart
+## 6. Product detail
 
-**What it does:** Lists cart items, shows item count and total price, and supports removing items, clearing the cart, and checkout.
+**What it does:** Full product page with an image pager, variant swatches, wishlist, and add-to-cart.
 
 **End to end:**
-- UI: [`CartFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/CartFragment.kt) + `res/layout/shr_cart_fragment.xml`; rows via [`CartRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/lineargridlayout/CartRecyclerViewAdapter.kt) + `res/layout/shr_cart_item.xml`.
-- Load: `loadCart()` runs on `viewLifecycleOwner.lifecycleScope`; it reads the **current user's** rows with `CartItemDAO.getAll(userId)` in `withContext(Dispatchers.IO)` (already one row per product with a real `product_quantity` — no in-memory regrouping), then pushes them to the adapter via `adapter.submit(list)` (which diffs with `DiffUtil`) on the main thread.
-- Totals: computed in `updateTotals()` right after the list loads: `count = items.size` (distinct product lines); `total = Σ(price × quantity)` with currency-safe parsing (`removePrefix("$").trim().toDoubleOrNull() ?: 0.0`, formatted via `shr_price_format`). Rendered into `cart_items_total_value` / `cart_items_price_value`.
-- Empty-cart guard: when the cart is empty, the **checkout and clear controls are disabled** so an empty "order" can't be placed.
-- Remove one item: a row's delete icon calls `CartItemDAO.deleteCartItem(product_id, userId)` off-main, then **reloads the cart in place** via a callback (no full-fragment recreation; toast "… removed from the cart").
-- Clear cart: `cart_clear_icon` calls `CartItemDAO.clearCart(userId)` off-main, then reloads in place.
-- Checkout: `cart_checkout` calls `CartItemDAO.clearCart(userId)` off-main, then navigates to `OrderPlacedFragment` on the main thread.
-- Navigation in: the toolbar cart icon on the product grid → `MainActivity.onOptionsItemSelected` (`R.id.cart_icon`) → `gotoCart()` → `CartFragment`.
-
-> Corrected by [plan_2_cart](plan_2_cart.md): the cart previously showed only a hardcoded placeholder row (B1). [plan_7_appwide](plan_7_appwide.md) then scoped it per-user (B15), gave it a real quantity column with in-place updates (B20), made totals currency-safe (B19), and added the empty-cart guard (B23).
+- UI: `ProductDetailScreen`/`ProductDetailContent` in [`ProductDetailScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/ProductDetailScreen.kt) — image pager with dots, rating + review count, color/variant chips, quantity stepper, sticky add-to-cart bar, and a "you may also like" row.
+- `ProductDetailViewModel` reads `ProductDetail(id)`, exposes the product + wishlist state, and writes via `CartRepository.addToCart` and `WishlistRepository` toggle.
 
 ---
 
-## 7. Order placed (confirmation)
+## 7. Cart
 
-**What it does:** Shows an animated confirmation after checkout and offers to continue shopping.
+**What it does:** Lists cart lines with quantity steppers and an order summary, and starts checkout.
 
 **End to end:**
-- [`OrderPlacedFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/OrderPlacedFragment.kt) + `res/layout/shr_order_placed_fragment.xml`.
-- Plays the animated vector drawable in the `done` `ImageView` (`res/drawable/avd_done.xml`) in `onResume`.
-- "Continue shopping" navigates back to `ProductGridFragment`.
+- UI: `CartScreen`/`CartContent` in [`CartScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/CartScreen.kt) — per-line variant subtitle, stepper, remove; summary (Subtotal / Shipping (Free) / Total) and a sticky "Checkout" bar. Empty state when no items.
+- `CartRepository` keeps one row per product+variant per user (`addOrIncrement`); totals use integer-cent math. Cart is scoped to the session `userId` (guests `-1`).
 
 ---
 
-## 8. Profile & sign out
+## 8. Checkout
 
-**What it does:** Shows the logged-in user's name, email, and phone, and lets them sign out.
+**What it does:** Reviews shipping address, delivery option, and payment method, then places an order.
 
 **End to end:**
-- [`ProfileFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/ProfileFragment.kt) + `res/layout/shr_profile_fragment.xml`.
-- Reads `user_name` / `user_email` / `user_phone` from the per-Activity `SharedPreferences` populated at login.
-- Reached from `ProductGridFragment` via the `grid_profile_button` (in the backdrop) → `navigateTo(ProfileFragment())`.
-- Sign out (`button_signOut`): clears `SharedPreferences`, then restarts `MainActivity` with `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TASK` (wipes the back stack and returns to `LoginFragment`).
+- UI: `CheckoutScreen`/`CheckoutContent` in [`CheckoutScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/CheckoutScreen.kt) — address/delivery/payment/summary cards; total = subtotal + delivery shipping.
+- `CheckoutViewModel` combines `AddressRepository`, `PaymentRepository`, `CartRepository`, and the chosen delivery option; `OrderRepository.placeOrder` persists an `Order` (+ `OrderLine` snapshots) with an order number and status, then routes to `OrderPlaced`.
 
 ---
 
-## 9. Settings — product grid layout
+## 9. Order placed / history / detail
 
-**What it does:** Lets the user switch the product grid between the regular vertical grid and a **horizontally-scrolling, two-row staggered carousel**.
+**What it does:** Confirms an order, then lets the user browse order history and open an order.
 
 **End to end:**
-- UI: [`SettingsFragment`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/SettingsFragment.kt) + `res/layout/shr_settings_fragment.xml` (a `SwitchMaterial`).
-- Entry point: the gear icon in the product-grid toolbar (`R.id.settings_icon` in `shr_toolbar_menu.xml`) → `MainActivity.onOptionsItemSelected` → `navigateTo(SettingsFragment(), true)`.
-- Persistence: the toggle is stored in a named `SharedPreferences` file `shrine_settings` (key `staggered_grid`), so it survives sign-out (which only clears the per-Activity session prefs).
-- Effect: [`ProductGridFragment.renderGrid()`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/fragments/ProductGridFragment.kt) (called from `onResume`) reads the preference and configures either a vertical `GridLayoutManager(2)` + `ProductCardRecyclerViewAdapter`, or a **horizontal** `StaggeredGridLayoutManager(2, HORIZONTAL)` + [`StaggeredProductCardRecyclerViewAdapter`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/adapters/staggeredgridlayout/StaggeredProductCardRecyclerViewAdapter.kt). For the staggered mode the RecyclerView height is bounded (`shr_staggered_recycler_height`) so it scrolls horizontally as a 2-row carousel; the `shr_staggered_product_card_{first,second,third}` layouts give cards varied widths for the staggered effect. Add-to-cart works identically in both layouts.
-
-> Added by [plan_6_settings](plan_6_settings.md), which repurposed the previously-dead staggered-grid adapter.
+- UI in [`OrderScreens.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/OrderScreens.kt): **OrderPlaced** (animated check, order number, estimated arrival; Track order is a placeholder), **OrderHistory** (status tabs All/Active/Delivered with status `AssistChip`s and thumbnails), **OrderDetail**.
+- All three read `OrderRepository` (history scoped per user; detail/placed by `orderId`).
 
 ---
 
-## Not features (defined but unreachable)
+## 10. Wishlist (Saved)
 
-These exist in the source tree but are **not** part of any user-facing flow. Do not document them as capabilities:
+**What it does:** A grid of saved products with quick-add-to-cart and heart toggle.
 
-- **Search / filter** — `shr_search`/`shr_filter` drawables and strings exist, but there is no toolbar menu item or handler for them.
+**End to end:**
+- UI: `WishlistScreen`/`WishlistContent` in [`WishlistScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/WishlistScreen.kt) — filled-heart toggle removes; QuickAddButton adds to cart; empty state.
+- `WishlistViewModel` joins `WishlistRepository.wishlist(userId)` with `CatalogRepository` products. Toggling a heart anywhere (Home/Search/Category/detail) updates the Saved tab reactively.
 
-> Note: all former dead code is now either active or removed — the Room `products` table/`ProductDAO`/`products.json` (plan_3_catalog) and the staggered product grid (plan_6_settings) are active, and the unused `ProductEntry` class was deleted.
+---
+
+## 11. Profile, Edit profile & sign out
+
+**What it does:** Shows avatar + stats and the account menu; edits profile; signs out (or, as a guest, offers Sign in / Create account).
+
+**End to end:**
+- UI: `ProfileScreen`/`ProfileContent` in [`ProfileScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/ProfileScreen.kt) — avatar, Orders/Saved/Reviews stats, rows to My orders / Addresses / Payment methods / Edit profile / Settings / Help center. **Guests** see Sign in + Create account; signed-in users see Sign out.
+- `ProfileViewModel` reads `SessionRepository` + order/saved counts. **Edit profile** ([`EditProfileScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/EditProfileScreen.kt)) edits name/email/phone/DOB (DatePicker) via `AuthRepository`/`SessionRepository`.
+
+---
+
+## 12. Settings
+
+**What it does:** Theme, grid density, notification preferences, and About.
+
+**End to end:**
+- UI: `SettingsScreen`/`SettingsContent` in [`SettingsScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/SettingsScreen.kt) — theme `SegmentedButton` (System/Light/Dark), Large-imagery switch, Order-updates/Promotions switches, About/version.
+- `SettingsRepository` (DataStore) persists the prefs; the theme is honored at the `ShrineTheme` root via `AppViewModel.themeMode`.
+
+---
+
+## 13. Addresses & Payment methods
+
+**What it does:** CRUD over shipping addresses and masked payment cards, reached from Profile and from Checkout's "Change".
+
+**End to end:**
+- UI: [`AddressesScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/AddressesScreen.kt) and [`PaymentMethodsScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/PaymentMethodsScreen.kt) — list + FloatingActionButton + ModalBottomSheet add/edit forms, per-user.
+- Backed by `AddressRepository` / `PaymentRepository`.
+
+---
+
+## Placeholders (local-first, intentionally non-functional)
+
+These render and navigate but are non-functional in this no-backend demo: **Forgot password** / Continue with email link (Login), **Track order** (Order placed/history), **Help center** ([`HelpCenterScreen.kt`](../app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/ui/screens/HelpCenterScreen.kt)), and live payment authorisation. See the coverage map in [plan_8_modernise.md](plan_8_modernise.md).
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design context and [CODEBASE.md](CODEBASE.md) for the file map.
