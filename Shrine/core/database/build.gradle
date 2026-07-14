@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace 'com.google.codelabs.mdc.kotlin.shrine.core.database'
+    namespace 'com.skystone1000.shrine.core.database'
     compileSdk 35
     defaultConfig {
         minSdk 24

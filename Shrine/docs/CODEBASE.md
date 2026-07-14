@@ -19,7 +19,7 @@ Shrine/
 ├── gradle/wrapper/...           # Gradle 8.7 wrapper
 ├── local.properties             # sdk.dir (machine-local, not committed)
 ├── docs/                        # ← documentation (this folder)
-├── core/                        # plan_8 modernisation modules (com.android.library); not used by live UI yet
+├── core/                        # plan_8 modernisation modules (com.android.library); consumed by the live Compose UI in :app
 │   ├── designsystem/            # Phase 1: Compose design system
 │   │   └── src/main/java/.../designsystem/
 │   │       ├── theme/           # Color, Type, Shape, Dimens, ExtendedColors, ShrineTheme
@@ -35,7 +35,7 @@ Shrine/
     └── src/
         ├── main/
         │   ├── AndroidManifest.xml         # Permissions, Application, MainActivity (LAUNCHER)
-        │   ├── java/com/google/codelabs/mdc/kotlin/shrine/
+        │   ├── java/com/skystone1000/shrine/
         │   │   ├── MainActivity.kt             # Phase 3: ComponentActivity → setContent { ShrineApp() }
         │   │   ├── ui/                          # Compose entry point (Phase 3 nav skeleton + Phase 4 screens)
         │   │   │   ├── ShrineApp.kt             #   NavHost (auth/main graphs) + bottom-bar Scaffold; theme from settings
@@ -94,7 +94,7 @@ $ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debu
 
 # Launch
 $ANDROID_HOME/platform-tools/adb shell am start -n \
-  com.google.codelabs.mdc.kotlin.shrine/.MainActivity
+  com.skystone1000.shrine/.MainActivity
 
 # Unit tests (template only) / lint
 ./gradlew testDebugUnitTest
@@ -102,11 +102,11 @@ $ANDROID_HOME/platform-tools/adb shell am start -n \
 
 In Android Studio: open the `Shrine/` folder, set **Gradle JDK** to the bundled JBR (17–21), then Run `app`.
 
-The APK's application id and launch component is `com.google.codelabs.mdc.kotlin.shrine`.
+The APK's application id and launch component is `com.skystone1000.shrine`.
 
 ## Naming & code conventions
 
-- **Package:** everything is under `com.google.codelabs.mdc.kotlin.shrine` (the namespace set in `app/build.gradle`; renamed to `com.skystone1000.shrine` in Phase 6).
+- **Package:** everything is under `com.skystone1000.shrine` (the namespace set in `app/build.gradle`; modules use `com.skystone1000.shrine.{core.*, designsystem}`). Renamed from the codelab's `com.google.codelabs.mdc.kotlin.shrine` in plan_8 Phase 6.
 - **Resource prefix:** the only `shr_`-prefixed resource still present is `Theme.Shrine` (`styles.xml`) + `shr_app_name`/other strings; the `shr_*.xml` layouts/menus/drawables were removed in Phase 5. New UI is Compose and carries no XML resources.
 - **UI:** screens are stateless `@Composable`s in `ui/screens/` (`findViewById`/`kotlinx.android.synthetic` no longer apply — there are no XML views in `:app`).
 - **Models:** entity fields use `snake_case` (e.g. `user_email`, `product_price`) to match column names; entities now live in `:core:model`.

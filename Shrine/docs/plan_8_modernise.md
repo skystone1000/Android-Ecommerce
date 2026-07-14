@@ -2,7 +2,7 @@
 title: Modernisation — Compose + Jetpack rewrite
 status: active
 last_updated: 2026-06-29
-scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–5 implemented (build verified — legacy stack deleted); Phases 6–7 pending.
+scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–6 implemented (build + unit tests verified — legacy deleted, package renamed to com.skystone1000.shrine); Phase 7 pending.
 ---
 
 # Plan — Modernisation to Compose + Jetpack
@@ -196,6 +196,8 @@ Checklist:
 - **Tests:** rename test source packages to match.
 - _Out of scope:_ `shr_` resources, `Theme.Shrine`, and the display name (separate brand task).
 - _Exit:_ `assembleDebug` + unit tests green, and `grep -r "com.google.codelabs.mdc.kotlin.shrine"` over the repo (excluding build output) returns **no** matches.
+
+> **Status (2026-06-29): done.** All 8 source roots (`:app` main/test/androidTest, `:core:{model,database,data,designsystem}`) were moved from `…/com/google/codelabs/mdc/kotlin/shrine` to `…/com/skystone1000/shrine` via `git mv`, and every `package`/`import` plus the 5 module `namespace`s, the `applicationId`, and the manifest `application android:name` were rewritten to `com.skystone1000.shrine`. A `clean assembleDebug` + `:core:data:testDebugUnitTest` (5/5 pass) verified green; Hilt/Room/KSP regenerated under the new package; the built APK reports `package: name='com.skystone1000.shrine'`. The grep exit is satisfied for all **code/config/manifests**; the only remaining matches are *intentional historical references* in docs — this plan's own Phase-6 description, the `audit_*`/`BUG_INVENTORY.md`/`plan_7` snapshots (which document the code as it was at audit time), all of which keep the old name as their subject. Per the out-of-scope note, `shr_` resources, `Theme.Shrine`, and the display name are unchanged.
 
 > **If a stable store identity is wanted sooner,** the `applicationId` alone can be flipped earlier (it is independent of the source package); the source/namespace rename is still best batched here to avoid churn while screens are in flight.
 

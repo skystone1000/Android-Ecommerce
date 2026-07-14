@@ -8,10 +8,10 @@ plugins {
 }
 
 android {
-    namespace 'com.google.codelabs.mdc.kotlin.shrine'
+    namespace 'com.skystone1000.shrine'
     compileSdk 35
     defaultConfig {
-        applicationId "com.google.codelabs.mdc.kotlin.shrine"
+        applicationId "com.skystone1000.shrine"
         minSdk 24
         targetSdk 35
         versionCode 1

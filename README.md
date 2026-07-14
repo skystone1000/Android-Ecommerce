@@ -30,7 +30,7 @@ cd Shrine
 ./gradlew assembleDebug
 # install & launch on a running emulator/device:
 $ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
-$ANDROID_HOME/platform-tools/adb shell am start -n com.google.codelabs.mdc.kotlin.shrine/.MainActivity
+$ANDROID_HOME/platform-tools/adb shell am start -n com.skystone1000.shrine/.MainActivity
 ```
 
 **Try it:** Register a user, then log in with that **email** (the "Username" field) and password to reach the product grid.
@@ -48,7 +48,7 @@ Plans and audits (when they exist) live alongside these as `Shrine/docs/plan_<N>
 ## Contributing
 
 1. Read **ARCHITECTURE.md**, **CODEBASE.md**, and **FEATURES.md** first — they tell you which source files matter for a given change.
-2. Make your change, following the conventions in CODEBASE.md (package `com.google.codelabs.mdc.kotlin.shrine`, `shr_` resource prefix, `findViewById` — no `kotlinx.android.synthetic`).
+2. Make your change, following the conventions in CODEBASE.md (package `com.skystone1000.shrine`, `shr_` resource prefix, `findViewById` — no `kotlinx.android.synthetic`).
 3. If your change affects architecture, a module's responsibility, or a feature, **update the matching doc in the same change**.
 4. Build and smoke-test (`./gradlew assembleDebug`, then run the affected screen).
 

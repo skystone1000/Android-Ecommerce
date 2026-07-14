@@ -10,7 +10,7 @@
         android:label="@string/shr_app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:name="com.google.codelabs.mdc.kotlin.shrine.application.ShrineApplication"
+        android:name="com.skystone1000.shrine.application.ShrineApplication"
         android:theme="@style/Theme.Shrine">
         <activity android:name=".MainActivity"
             android:exported="true">

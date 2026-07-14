@@ -47,6 +47,6 @@ The three core docs (`ARCHITECTURE.md`, `CODEBASE.md`, `FEATURES.md`) carry `tit
 
 ## Project quick facts
 
-- Package / application id: `com.google.codelabs.mdc.kotlin.shrine`.
+- Package / application id: `com.skystone1000.shrine`.
 - Build from `Shrine/`: `./gradlew assembleDebug`. Toolchain: Gradle 8.7, AGP 8.5.2, Kotlin 1.9.24, JVM target 17, compileSdk 34 / minSdk 16. Needs SDK platforms 33 + 34.
 - Conventions: `shr_` resource prefix; access views with `findViewById` (the project was migrated off `kotlin-android-extensions` — do not reintroduce `kotlinx.android.synthetic`).
