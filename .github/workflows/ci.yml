@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+# The Gradle project lives in the Shrine/ subdirectory of the repo.
+defaults:
+  run:
+    working-directory: Shrine
+
+jobs:
+  build:
+    name: Lint · Unit tests · Assemble
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Robolectric-backed JVM tests: repositories, PasswordHasher, money math, ViewModels (Turbine),
+      # Compose UI tests, Room DB integrity — plus design-system screenshot verification (Roborazzi).
+      - name: Unit tests + screenshot verification
+        run: ./gradlew testDebugUnitTest -Proborazzi.test.verify=true
+
+      - name: Android Lint
+        run: ./gradlew lintDebug
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload test & lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            Shrine/**/build/reports
+            Shrine/**/build/outputs/roborazzi

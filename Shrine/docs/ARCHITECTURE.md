@@ -96,7 +96,7 @@ Declared in [app/build.gradle](../app/build.gradle); all versions are centralise
 
 These are accurate observations of the current code, surfaced so docs match reality (do not assume they are intentional design):
 
-- **Per-screen automated tests are deferred.** The Phase 4 migration shipped without the ViewModel-unit / Compose-UI test matrix; it is tracked for **Phase 7 — Quality gates**. The `:core:data` Robolectric repository tests (Phase 2) remain green.
+- **On-device instrumented tests are deferred.** Phase 7 implemented the quality gates as a **44-test JVM suite** (`testDebugUnitTest`): repository / `PasswordHasher` / money-math unit tests, Turbine-based ViewModel tests, Robolectric Compose UI tests, a Roborazzi design-system screenshot gate, and a Room DB integrity test — all wired into `.github/workflows/ci.yml`. True on-device (`androidTest`) Compose/navigation runs remain deferred (they'd need an emulator in CI); the equivalent assertions run under Robolectric.
 - **Package rename done (Phase 6).** Source/`namespace`/`applicationId` are now `com.skystone1000.shrine` (modules under `com.skystone1000.shrine.{core.*, designsystem}`). The `shr_` resource prefix, `Theme.Shrine` style name, and the display name are intentionally unchanged (separate brand task).
 - **Product images may not resolve.** The seeded catalog uses placeholder/remote image URLs that may 404; Coil falls back to its placeholder. (Historical resolved items — plaintext passwords, hardcoded catalog, `GlobalScope`, dead code — were fixed in plan_1–plan_7 and then carried into `:core:*`; the Fragment code that hosted them was deleted in Phase 5.)
 

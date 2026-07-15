@@ -28,7 +28,8 @@ Shrine/
 │   ├── model/                   # Phase 2: Room @Entity classes + value types (Variant, enums, Money)
 │   ├── database/                # Phase 2: ShrineDatabase (shrine.db), DAOs, Converters, CatalogSeed, DatabaseModule
 │   └── data/                    # Phase 2: repositories, Session/Settings (DataStore), PasswordHasher, Hilt modules
-│       └── src/test/            # Robolectric repository tests (in-memory Room) — Phase 2 exit gate
+│       └── src/test/            # Phase 7: Robolectric repo tests + MoneyTest + PasswordHasherTest + DataStore tests
+│   (core/designsystem/src/test/screenshots/  # Phase 7: Roborazzi gallery baselines, light + dark)
 └── app/
     ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Hilt+KSP, Compose, Coil, DataStore, Nav-Compose, coroutines, Material window theme). No Room/Volley/Gson/Fragment (removed Phase 5)
     ├── proguard-rules.pro       # ProGuard rules (release; minify disabled)
@@ -66,8 +67,8 @@ Shrine/
         │       ├── drawable/ + drawable-v24/   # Launcher background/foreground only
         │       ├── mipmap-*/      # Launcher icons
         │       └── values/        # colors.xml, dimens.xml, strings.xml, styles.xml (Theme.Shrine window theme)
-        ├── test/                  # ExampleUnitTest.kt (template only)
-        └── androidTest/           # ExampleInstrumentedTest.kt (template only)
+        ├── test/                  # Phase 7 JVM tests: ViewModel (Turbine) + Robolectric Compose UI + testing/{MainDispatcherRule,Fakes}
+        └── androidTest/           # ExampleInstrumentedTest.kt (template only; on-device runs deferred)
 ```
 
 > **Phase 5 (2026-06-29) deleted the entire legacy stack** from `:app`: `fragments/`, `adapters/` (linear + staggered RecyclerView), `database/` (the app-local Room DB `contactDB` + DAOs + `ProductSeed`), `models/` (`User`/`CartItem`/`Product` entities), `network/ImageRequester` (Volley), `auth/` (`PasswordHasher` + `Session`), `NavigationHost.kt`, `NavigationIconClickListener.kt`, every `res/layout/*`, `res/menu/`, `res/animator/`, `res/raw/products.json`, and all legacy `shr_*` drawables. The catalog/auth/cart logic and data now live in `:core:data` + `:core:database` + `:core:model`; the only `:app` Kotlin left is `MainActivity`, `ShrineApplication`, and the Compose `ui/` package.
@@ -96,9 +97,19 @@ $ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debu
 $ANDROID_HOME/platform-tools/adb shell am start -n \
   com.skystone1000.shrine/.MainActivity
 
-# Unit tests (template only) / lint
+# Unit tests — all JVM (Robolectric): repos, ViewModels (Turbine), Compose UI, Room DB, screenshots
 ./gradlew testDebugUnitTest
+
+# Lint
+./gradlew lintDebug
+
+# Record/refresh the design-system screenshot baselines after an intentional UI change
+./gradlew :core:designsystem:testDebugUnitTest -Proborazzi.test.record=true
+# Verify screenshots against the committed baselines (what CI runs)
+./gradlew testDebugUnitTest -Proborazzi.test.verify=true
 ```
+
+CI (`.github/workflows/ci.yml`) runs `testDebugUnitTest -Proborazzi.test.verify=true`, `lintDebug`, and `assembleDebug` on every push/PR.
 
 In Android Studio: open the `Shrine/` folder, set **Gradle JDK** to the bundled JBR (17–21), then Run `app`.
 
@@ -127,5 +138,6 @@ The APK's application id and launch component is `com.skystone1000.shrine`.
 | Change colors/theme | Compose tokens in `:core:designsystem` `theme/`; the Activity window theme in `res/values/styles.xml`. |
 | Change settings (theme/density/notifications) | `SettingsRepository` (DataStore, `:core:data`) + `ui/screens/SettingsScreen.kt`. |
 | Change build config / dependencies | `app/build.gradle` (module) and `build.gradle` (root); bump versions in `gradle/libs.versions.toml` (version catalog). |
+| Add/run a test | JVM tests live in each module's `src/test/`: repository/util tests in `:core:data`, DB test in `:core:database`, gallery screenshot test in `:core:designsystem`, ViewModel + Compose UI tests in `:app` (fakes in `app/.../testing/Fakes.kt`). Run `./gradlew testDebugUnitTest`. |
 
 See [FEATURES.md](FEATURES.md) for end-to-end feature behavior and [ARCHITECTURE.md](ARCHITECTURE.md) for the system design.

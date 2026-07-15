@@ -19,6 +19,11 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -33,4 +38,11 @@ dependencies {
 
     implementation libs.hilt.android
     ksp libs.hilt.compiler
+
+    // DB persistence/integrity tests run on the JVM via Robolectric (Phase 7)
+    testImplementation libs.junit
+    testImplementation libs.robolectric
+    testImplementation libs.androidx.test.core
+    testImplementation libs.coroutines.test
+    testImplementation libs.room.runtime
 }

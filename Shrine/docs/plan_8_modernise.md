@@ -1,8 +1,8 @@
 ---
 title: Modernisation — Compose + Jetpack rewrite
-status: active
+status: completed
 last_updated: 2026-06-29
-scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–6 implemented (build + unit tests verified — legacy deleted, package renamed to com.skystone1000.shrine); Phase 7 pending.
+scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volley to a modern Jetpack stack — 100% Jetpack Compose (Material 3), Navigation-Compose, MVVM + Hilt, repository layer over Room + DataStore, Coil. Targets a premium-minimal light/dark UI and a full e-commerce feature set. Progress: Phases 0–7 complete (build + 44 unit/UI/screenshot/DB tests green; legacy deleted, package renamed to com.skystone1000.shrine, CI added).
 ---
 
 # Plan — Modernisation to Compose + Jetpack
@@ -207,6 +207,15 @@ Checklist:
 - **Screenshot:** Roborazzi/Paparazzi for the design-system gallery (light + dark) and key screens.
 - **DB:** Room migration test.
 - **CI:** GitHub Actions running `lint`, unit, and instrumented tests.
+
+> **Status (2026-06-29): done.** A **44-test** JVM suite (all green) runs in `testDebugUnitTest`, plus a GitHub Actions CI workflow. Coverage:
+> - **Unit / repositories** (`:core:data`, Robolectric + in-memory Room / file-backed DataStore): catalog seed+search, auth register/login + duplicate-email, cart upsert/subtotal, order placement; wishlist toggle, address/payment default handling; Session + Settings DataStore; **`MoneyTest`** (money math) and **`PasswordHasherTest`** (salted-PBKDF2 determinism / non-trim).
+> - **ViewModels** (`:app`, Turbine + `MainDispatcherRule(UnconfinedTestDispatcher)` + in-memory fakes in `testing/Fakes.kt`): Login, Register, Cart, Wishlist, Settings, Profile (guest vs signed-in), Category (sort + `SavedStateHandle.toRoute`), and `AppViewModel` (theme/session/sign-out).
+> - **Compose UI** (`:app`, **Robolectric** so they run on the JVM): `ScreenRenderTest` drives the public `LoginScreen`/`SettingsScreen` over fakes and asserts the rendered tree.
+> - **Screenshot** (`:core:designsystem`, **Roborazzi** + Robolectric): `GalleryScreenshotTest` captures the component gallery in light + dark; baselines committed in `core/designsystem/src/test/screenshots/`. Record with `-Proborazzi.test.record=true`; CI verifies with `-Proborazzi.test.verify=true`.
+> - **DB** (`:core:database`): `ShrineDatabaseTest` asserts the declared version and that data survives a close/reopen. *A multi-version `MigrationTestHelper` test isn't applicable yet — the schema is at version 1 with `exportSchema = false`; it becomes meaningful at version 2.*
+> - **CI:** `.github/workflows/ci.yml` (JDK 17 + Android SDK) runs `testDebugUnitTest -Proborazzi.test.verify=true`, `lintDebug`, and `assembleDebug`, uploading reports.
+> - *Deferred:* full instrumented (on-device) Compose/navigation tests — the equivalent assertions run as Robolectric JVM tests here; on-device runs would need an emulator in CI.
 
 ## Dependencies (indicative — pin to latest stable in the catalog)
 Compose BOM, `material3`, `navigation-compose`, `hilt-android` + `hilt-navigation-compose`, `room-runtime`/`room-ktx` (KSP), `datastore-preferences`, `coil-compose`, `lifecycle-viewmodel-compose`, `kotlinx-serialization-json`, `kotlinx-coroutines`, `androidx.compose.ui:ui-test-junit4`, `turbine`, `roborazzi`.
