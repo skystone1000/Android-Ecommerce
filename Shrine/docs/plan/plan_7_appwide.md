@@ -7,13 +7,13 @@ scope: Whole-app audit after plan_1–plan_6 plus the sequenced fixes. Catalogue
 
 # Plan 7 — App-wide Audit & Fixes
 
-This document is both the **audit** (findings + the four audit questions) and the **fix plan** for the second review pass. It re-reviews the code after `plan_1`–`plan_6` closed `B1`–`B13`, and captures defects that were introduced, missed, or newly understood. New IDs continue the [BUG_INVENTORY.md](BUG_INVENTORY.md) space at **B14**.
+This document is both the **audit** (findings + the four audit questions) and the **fix plan** for the second review pass. It re-reviews the code after `plan_1`–`plan_6` closed `B1`–`B13`, and captures defects that were introduced, missed, or newly understood. New IDs continue the [BUG_INVENTORY.md](../BUG_INVENTORY.md) space at **B14**.
 
 **Status: all code fixes B14–B23 are implemented, `./gradlew assembleDebug` is green, and every observable fix was verified on the emulator (see below). B24 is left as noted.** The only outstanding follow-up is the automated test suite (no scaffolding existed; tests listed in Q4).
 
 > **Deviation from the original plan:** Step 7 fixes B15 by **scoping** the cart with a `cart.user_id` column (every query filtered by user) rather than clearing the cart on logout — this prevents cross-account visibility *and* lets each user keep their own cart across sessions.
 
-Severity scale matches [BUG_INVENTORY.md](BUG_INVENTORY.md): **Critical** · **High** · **Medium** · **Low**. Paths are relative to `Shrine/app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/` unless noted.
+Severity scale matches [BUG_INVENTORY.md](../BUG_INVENTORY.md): **Critical** · **High** · **Medium** · **Low**. Paths are relative to `Shrine/app/src/main/java/com/google/codelabs/mdc/kotlin/shrine/` unless noted.
 
 ---
 
@@ -121,4 +121,4 @@ New `database/CartOps.addOrIncrement(userId, product)` upserts one row per produ
 
 ---
 
-See [BUG_INVENTORY.md](BUG_INVENTORY.md) for the consolidated defect list and [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md) for deferred work (full loading/error states, cart quantity stepper, MVVM refactor, automated test suite).
+See [BUG_INVENTORY.md](../BUG_INVENTORY.md) for the consolidated defect list and [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md) for deferred work (full loading/error states, cart quantity stepper, MVVM refactor, automated test suite).

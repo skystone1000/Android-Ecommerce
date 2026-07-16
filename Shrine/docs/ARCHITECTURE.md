@@ -6,7 +6,7 @@ scope: System design, components, data/control flow, dependencies, and key desig
 
 # Architecture
 
-Shrine is an Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been rebuilt onto a modern Jetpack stack (see [plan_8_modernise.md](plan_8_modernise.md)): 100% Jetpack Compose UI + MVVM + Hilt over a repository layer on Room + DataStore. As of plan_8 **Phase 5** the original Fragment/XML/Volley stack has been **deleted** — `:app` now contains only the Compose entry point and the `:core:*` modules hold the design system, model, database, and data layers.
+Shrine is an Android application written in Kotlin. It originates from the Google Material Components (MDC) "Shrine" codelab and has been rebuilt onto a modern Jetpack stack (see [plan_8_modernise.md](plan/plan_8_modernise.md)): 100% Jetpack Compose UI + MVVM + Hilt over a repository layer on Room + DataStore. As of plan_8 **Phase 5** the original Fragment/XML/Volley stack has been **deleted** — `:app` now contains only the Compose entry point and the `:core:*` modules hold the design system, model, database, and data layers.
 
 > All paths below are relative to the `Shrine/` project directory unless noted.
 

@@ -9,7 +9,7 @@ scope: Full migration of the Shrine app from single-Activity/Fragments/XML/Volle
 
 This plan rebuilds the UI and architecture on a modern stack while preserving the local-first data model. It supersedes the Fragment/XML UI; the Room entities and business rules carry over behind a new repository layer.
 
-> Companion: the **UI/design brief** for generating the new screens lives in [design_brief_modernise.md](design_brief_modernise.md). This plan is the *engineering* side; that brief is the *visual* side. They share the same screen list and design tokens.
+> Companion: the **UI/design brief** for generating the new screens lives in [design_brief_modernise.md](../prompts/design_brief_modernise.md). This plan is the *engineering* side; that brief is the *visual* side. They share the same screen list and design tokens.
 
 ## Decisions (locked)
 
@@ -87,11 +87,11 @@ Existing entities evolve; nothing is thrown away. Fields in **bold** are new req
 - Session (`user_id`, name, email, phone) and settings move from per-Activity `SharedPreferences` to **DataStore**. Settings now hold **`themeMode` (System/Light/Dark)**, **`largeImagery` (grid density)**, and **notification prefs (`orderUpdates`, `promotions`)**.
 - DB **version bump + Room migrations** (or destructive fallback for the demo) with a migration test.
 
-> **Local-first / demo placeholders.** With no backend, a few figma affordances are intentionally non-functional UI: **Forgot password**, **Continue with email link**, **Track order**, **Help center**, and live payment authorisation. They render and navigate but show a placeholder/snackbar. They are listed in the [coverage map](#ui-coverage-map-figma--plan) and pushed to [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md) rather than built now.
+> **Local-first / demo placeholders.** With no backend, a few figma affordances are intentionally non-functional UI: **Forgot password**, **Continue with email link**, **Track order**, **Help center**, and live payment authorisation. They render and navigate but show a placeholder/snackbar. They are listed in the [coverage map](#ui-coverage-map-figma--plan) and pushed to [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md) rather than built now.
 
 ## UI coverage map (figma → plan)
 
-Every screen/element in the figma design doc (`figma/Shrine.dc.html`, 15 screens + design-system + component sheet) is accounted for below. **Real** = built as working functionality; **Placeholder** = renders and navigates but is non-functional in this local-first demo (routed to [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md)).
+Every screen/element in the figma design doc (`figma/Shrine.dc.html`, 15 screens + design-system + component sheet) is accounted for below. **Real** = built as working functionality; **Placeholder** = renders and navigates but is non-functional in this local-first demo (routed to [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md)).
 
 | Figma element | Covered by | Status |
 |---------------|-----------|--------|
@@ -224,11 +224,11 @@ Compose BOM, `material3`, `navigation-compose`, `hilt-android` + `hilt-navigatio
 - **Big-bang risk** → phased; Compose interop means old screens keep working until Phase 5.
 - **Schema/migration** → migration tests; destructive fallback acceptable for the demo.
 - **Price model change (String→cents)** → one-time data/seed migration; covered by money-math unit tests.
-- **Scope creep (full e-commerce)** → Phase 4 table is the contract; backlog beyond it stays in [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md).
+- **Scope creep (full e-commerce)** → Phase 4 table is the contract; backlog beyond it stays in [FEATURE_BACKLOG.md](../FEATURE_BACKLOG.md).
 - **minSdk 24** drops <1% legacy devices — accepted.
 - **Package rename** (`…mdc.kotlin.shrine` → `…skystone1000.shrine`) is a wide mechanical refactor → done as one IDE-assisted pass in Phase 6 after legacy deletion (fewer files, stable tree), verified by a full-repo grep + green build/tests. Note: changing `applicationId` resets the installed-app identity (a fresh install, not an upgrade) — fine for the demo.
 
 ## Definition of done
 Single-Activity Compose app shipped under applicationId/package **`com.skystone1000.shrine`**; the full figma screen set on the new stack with light/dark (15 designed screens + Addresses/Payment-methods management; placeholders rendered per the [coverage map](#ui-coverage-map-figma--plan)); Fragments/XML/Volley deleted; repositories + Hilt + DataStore in place; no references to the old `com.google.codelabs.mdc.kotlin.shrine` package remain; tests green in CI; docs (`ARCHITECTURE`, `CODEBASE`, `FEATURES`) updated to describe the Compose architecture.
 
-See [design_brief_modernise.md](design_brief_modernise.md) for the UI generation prompt (design system + every screen).
+See [design_brief_modernise.md](../prompts/design_brief_modernise.md) for the UI generation prompt (design system + every screen).

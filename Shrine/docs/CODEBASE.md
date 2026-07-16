@@ -18,7 +18,7 @@ Shrine/
 ├── gradle/libs.versions.toml    # Version catalog: all plugin/library versions
 ├── gradle/wrapper/...           # Gradle 8.7 wrapper
 ├── local.properties             # sdk.dir (machine-local, not committed)
-├── docs/                        # ← documentation (this folder)
+├── docs/                        # ← documentation: core docs + FEATURE_BACKLOG/BUG_INVENTORY here; plans/audits in docs/plan/, design briefs/prompts in docs/prompts/
 ├── core/                        # plan_8 modernisation modules (com.android.library); consumed by the live Compose UI in :app
 │   ├── designsystem/            # Phase 1: Compose design system
 │   │   └── src/main/java/.../designsystem/

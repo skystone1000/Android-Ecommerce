@@ -52,4 +52,4 @@ Paste the block below into Claude (design) or your UI generation tool. It is sel
 ---
 
 ## How this maps to engineering
-The screen list above is intentionally identical to Phase 4 of [plan_8_modernise.md](plan_8_modernise.md). The token table feeds `:core:designsystem` (`ShrineTheme`, color schemes, typography, shapes); the component sheet feeds the core composables; each screen maps to a `Screen` + `ViewModel` + `UiState`.
+The screen list above is intentionally identical to Phase 4 of [plan_8_modernise.md](../plan/plan_8_modernise.md). The token table feeds `:core:designsystem` (`ShrineTheme`, color schemes, typography, shapes); the component sheet feeds the core composables; each screen maps to a `Screen` + `ViewModel` + `UiState`.

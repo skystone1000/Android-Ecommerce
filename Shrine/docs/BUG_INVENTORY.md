@@ -17,7 +17,7 @@ Every entry was verified in source on 2026-06-27. Line numbers are relative to `
 - 2026-06-27 — plan_4_security implemented: **B3** fixed (salted PBKDF2 hashing; no plaintext stored/compared); **B9** fixed (unique `user_email` index + pre-insert guard); **B6** advanced (register now lifecycle-scoped — only the add-to-cart adapter still uses `GlobalScope`). DB schema bumped to v2 (destructive migration).
 - 2026-06-27 — plan_5_cleanup implemented: **B10**, **B12**, **B13** fixed; **B11** resolved with a scope change — instead of deleting the staggered grid it was **repurposed into a feature** (Settings screen with a grid-layout toggle, see plan_6_settings). `ProductEntry` is the sole remaining unused class, intentionally retained.
 - 2026-06-27 — remaining items closed: **B6** fully fixed (`ProductCardRecyclerViewAdapter` add-to-cart now uses the host activity's `lifecycleScope` instead of `GlobalScope` — **no `GlobalScope` remains anywhere**); **B11** fully resolved (the unused `network/ProductEntry.kt` was removed). **B1–B13 are all ✅.**
-- 2026-06-27 — [plan_7_appwide](plan_7_appwide.md) re-reviewed the whole app and opened **B14–B24** (see second table below). **B14** (product grid empty after returning from cart) fixed same session in `ProductGridFragment.onDestroyView`.
+- 2026-06-27 — [plan_7_appwide](plan/plan_7_appwide.md) re-reviewed the whole app and opened **B14–B24** (see second table below). **B14** (product grid empty after returning from cart) fixed same session in `ProductGridFragment.onDestroyView`.
 - 2026-06-28 — plan_7_appwide implemented and verified on emulator: **B14–B23 all ✅**; **B24** left as noted. (The separate `audit_1_appwide` doc was folded into `plan_7_appwide` and removed.)
 
 | # | Severity | Bug | Location | Fix in | Status |
@@ -109,7 +109,7 @@ Nothing prevented two `User` rows with the same `user_email`; `getLogin` returns
 
 ### B10–B13 — Low — ✅ Fixed (plan_5_cleanup)
 - **B10** ✅: replaced the deprecated `Activity.windowManager.defaultDisplay.getMetrics()` in `NavigationIconClickListener` with `context.resources.displayMetrics.heightPixels` (and dropped the now-unused `Activity`/`DisplayMetrics` imports). Verified on-device: the backdrop reveal still animates.
-- **B11** ✅ Fixed (plan_3_catalog + plan_5_cleanup + final): hardcoded catalog gone (Room-seeded), images show a branded `shr_logo` placeholder (all remote product URLs return 404/000). The staggered grid was repurposed into a real feature (see [plan_6_settings](plan_6_settings.md)). The last unused class, `network/ProductEntry.kt`, has now been **removed** (`products.json` stays — it is used by `ProductSeed`). No dead code paths remain.
+- **B11** ✅ Fixed (plan_3_catalog + plan_5_cleanup + final): hardcoded catalog gone (Room-seeded), images show a branded `shr_logo` placeholder (all remote product URLs return 404/000). The staggered grid was repurposed into a real feature (see [plan_6_settings](plan/plan_6_settings.md)). The last unused class, `network/ProductEntry.kt`, has now been **removed** (`products.json` stays — it is used by `ProductSeed`). No dead code paths remain.
 - **B12** ✅: removed the misplaced `@RequiresApi(LOLLIPOP)` in `OrderPlacedFragment` (the `is AnimatedVectorDrawable` runtime check is the real guard) and its unused `Build`/`RequiresApi` imports.
 - **B13** ✅: `targetSdkVersion` raised to 34 to match `compileSdk`; full flow re-verified on-device.
 

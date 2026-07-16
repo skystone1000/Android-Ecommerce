@@ -36,6 +36,7 @@ All paths are relative to `Shrine/`.
 - Validation: email non-empty/contains `@`; password ≥ 8 chars.
 - Auth: `AuthRepository.login` looks up the user, recomputes the salted PBKDF2 hash, and compares; on success `LoginViewModel` calls `SessionRepository.signIn(...)`. **Skip** enters the main graph as a guest (`userId = -1`).
 - Navigation: a session/guest sends the user into the main graph; sign-out/sign-in switch graphs via `popUpTo`.
+- **Session persistence:** the session is stored in **DataStore** (`SessionRepository`), so it survives app restarts — on launch the `Splash` gate (`AppViewModel`) reads the persisted session and auto-routes a returning user (or guest) straight to Home, skipping the login screen.
 
 ---
 
@@ -152,6 +153,6 @@ All paths are relative to `Shrine/`.
 
 ## Placeholders (local-first, intentionally non-functional)
 
-These render and navigate but are non-functional in this no-backend demo: **Forgot password** / Continue with email link (Login), **Track order** (Order placed/history), **Help center** ([`HelpCenterScreen.kt`](../app/src/main/java/com/skystone1000/shrine/ui/screens/HelpCenterScreen.kt)), and live payment authorisation. See the coverage map in [plan_8_modernise.md](plan_8_modernise.md).
+These render and navigate but are non-functional in this no-backend demo: **Forgot password** / Continue with email link (Login), **Track order** (Order placed/history), **Help center** ([`HelpCenterScreen.kt`](../app/src/main/java/com/skystone1000/shrine/ui/screens/HelpCenterScreen.kt)), and live payment authorisation. See the coverage map in [plan_8_modernise.md](plan/plan_8_modernise.md).
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design context and [CODEBASE.md](CODEBASE.md) for the file map.

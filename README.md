@@ -43,7 +43,7 @@ Deep-dive docs live in [`Shrine/docs/`](Shrine/docs/). Read them in this order:
 2. **[CODEBASE.md](Shrine/docs/CODEBASE.md)** — directory tree, module responsibilities, entry points, build/run commands, conventions, and "where to look" recipes.
 3. **[FEATURES.md](Shrine/docs/FEATURES.md)** — every user-facing feature and the modules that implement it end to end.
 
-Plans and audits (when they exist) live alongside these as `Shrine/docs/plan_<N>_<feature-slug>.md` and `Shrine/docs/audit_<N>_<feature-slug>.md`. _None exist yet._
+Plans and audits live under [`Shrine/docs/plan/`](Shrine/docs/plan/) (`plan_<N>_<feature-slug>.md` / `audit_<N>_<feature-slug>.md`); design briefs and prompts live under [`Shrine/docs/prompts/`](Shrine/docs/prompts/).
 
 ## Contributing
 
