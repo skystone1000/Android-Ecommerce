@@ -1,5 +1,7 @@
 package com.skystone1000.shrine.ui
 
+import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -10,9 +12,12 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import com.skystone1000.shrine.designsystem.component.BottomNavItem
 import com.skystone1000.shrine.designsystem.component.ShrineBottomBar
 import com.skystone1000.shrine.designsystem.theme.ShrineTheme
+import com.skystone1000.shrine.designsystem.theme.ThemeMode
 import com.skystone1000.shrine.ui.navigation.Addresses
 import com.skystone1000.shrine.ui.navigation.AuthGraph
 import com.skystone1000.shrine.ui.navigation.Cart
@@ -72,6 +78,24 @@ import com.skystone1000.shrine.ui.screens.WishlistScreen
 fun ShrineApp() {
     val appViewModel: AppViewModel = hiltViewModel()
     val themeMode by appViewModel.themeMode.collectAsState()
+
+    // plan_9 Phase A (F2/F5): keep the system-bar icons legible against the resolved theme.
+    // Resolved with the same rule ShrineTheme uses internally; edge-to-edge leaves the bars
+    // transparent so the dark/light app background shows through behind them.
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
 
     ShrineTheme(themeMode = themeMode) {
         val navController = rememberNavController()

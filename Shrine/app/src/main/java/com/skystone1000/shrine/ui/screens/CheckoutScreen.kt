@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -152,7 +153,9 @@ private fun CheckoutContent(
         topBar = { ShrineTopBar(title = "Checkout", onBack = onBack) },
         bottomBar = {
             Surface(shadowElevation = 8.dp) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                // plan_9 Phase A (F1): pushed screen, no app bottom bar — re-add the nav-bar inset
+                // so "Place order" clears the system navigation bar.
+                Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
                     ShrineButton(
                         text = "Place order · ${Money.format(state.totalCents)}",
                         onClick = onPlaceOrder,

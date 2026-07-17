@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -129,7 +130,9 @@ private fun OrderPlacedContent(
     )
 
     Column(
-        modifier = modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
+        // plan_9 Phase A (F1): pushed screen, no app bottom bar — inset both system bars so the
+        // confirmation content and CTAs clear the status and navigation bars.
+        modifier = modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

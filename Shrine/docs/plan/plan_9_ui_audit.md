@@ -2,6 +2,7 @@
 title: UI Audit & Remediation — insets, spacing, figma parity, hardening
 status: active
 last_updated: 2026-06-29
+# Phase A (insets & system bars) implemented 2026-06-29; Phases B–D outstanding.
 scope: Findings from an emulator + code + figma audit of the Compose app (system-bar insets, padding/margins, figma parity) plus answers to the security/efficiency/regression/test questions, and a phased plan to fix them.
 ---
 
@@ -105,6 +106,9 @@ The inset fixes touch global layout, so:
 ## Remediation plan (phased)
 
 ### Phase A — Insets & system bars (P0/P1) — *do first, ship-blocking*
+
+> **Status: implemented (2026-06-29).** Steps 1, 2, 4 and 6 are done; F1/F2/F5 are fixed in code (`assembleDebug` + the 44-test JVM suite stay green). Step 3 is intentionally **not** done as written — the per-screen inner `Scaffold`s already inset the bottom of their scroll content via the default `contentWindowInsets = systemBars`, so step 5 (and F3) is already covered and adding extra `navigationBarsPadding()` there would *double* the inset. The remaining open item is **step 7** (on-device re-verification across gesture/3-button × light/dark). Changes: `MainActivity` (`enableEdgeToEdge()`), `ShrineApp` (theme-driven `WindowInsetsControllerCompat` icon appearance), `styles.xml` (dropped hard-coded `windowLightStatusBar`), and `navigationBarsPadding()` on the sticky CTAs in `ProductDetailScreen`/`CheckoutScreen`/`OrderScreens` (OrderPlaced). Tab screens were deliberately left untouched.
+
 1. **Adopt explicit edge-to-edge.** In `MainActivity.onCreate` call `enableEdgeToEdge()` before `setContent`.
 2. **Drive system-bar icon appearance from the theme.** In `ShrineTheme` (or `MainActivity` via a `SideEffect`), set `WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars / isAppearanceLightNavigationBars = !darkTheme`. Remove the hard-coded `android:windowLightStatusBar=true` from [styles.xml](../../app/src/main/res/values/styles.xml) (or make it theme-conditional). Fixes **F2**.
 3. **Fix the bottom inset for pushed screens.** Keep the outer `Scaffold` top inset at 0, but stop zeroing the **bottom**: change `contentWindowInsets` to expose `WindowInsets.navigationBars` (or simpler, give the `NavHost` content `Modifier.consumeWindowInsets`/`navigationBarsPadding` only when there is **no** app bottom bar). Concretely: when `selectedTab < 0`, the content area must carry the navigation-bar inset. Fixes **F1**.

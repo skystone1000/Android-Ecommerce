@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -183,7 +184,9 @@ private fun ProductDetailContent(
             if (product != null) {
                 Surface(shadowElevation = 8.dp) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        // plan_9 Phase A (F1): this is a pushed screen with no app bottom bar, so the
+                        // nav-bar inset must be re-added here or the CTA draws under the system nav bar.
+                        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {

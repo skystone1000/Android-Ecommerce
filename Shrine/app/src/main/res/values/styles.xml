@@ -6,7 +6,9 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <!-- System-bar icon appearance is driven from the Compose theme at runtime
+             (ShrineApp + WindowInsetsControllerCompat, plan_9 Phase A), not hard-coded here,
+             so the icons follow light/dark instead of always rendering dark-on-dark. -->
         <item name="android:textColorPrimary">@color/textColorPrimary</item>
     </style>
 
