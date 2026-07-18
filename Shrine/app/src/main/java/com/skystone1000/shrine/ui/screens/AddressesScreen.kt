@@ -26,7 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,7 +99,7 @@ fun AddressesScreen(
     modifier: Modifier = Modifier,
     viewModel: AddressesViewModel = hiltViewModel(),
 ) {
-    val addresses by viewModel.addresses.collectAsState()
+    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
     AddressesContent(
         addresses = addresses,
         onBack = onBack,

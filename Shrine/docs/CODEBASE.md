@@ -32,7 +32,7 @@ Shrine/
 │   (core/designsystem/src/test/screenshots/  # Phase 7: Roborazzi gallery baselines, light + dark)
 └── app/
     ├── build.gradle             # Module Gradle: SDKs (compile/target 35, min 24), deps (Hilt+KSP, Compose, Coil, DataStore, Nav-Compose, coroutines, Material window theme). No Room/Volley/Gson/Fragment (removed Phase 5)
-    ├── proguard-rules.pro       # ProGuard rules (release; minify disabled)
+    ├── proguard-rules.pro       # R8 keep rules (release; minify + resource shrinking enabled — plan_9 Phase C)
     └── src/
         ├── main/
         │   ├── AndroidManifest.xml         # Permissions, Application, MainActivity (LAUNCHER)

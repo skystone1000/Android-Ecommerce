@@ -51,8 +51,14 @@ class DefaultAuthRepository @Inject constructor(
 
     override suspend fun login(email: String, password: String): AuthResult {
         val user = userDao.getByEmail(email.trim().lowercase()) ?: return AuthResult.InvalidCredentials
-        val computed = PasswordHasher.hash(password, user.passwordSalt)
-        return if (computed == user.passwordHash) AuthResult.Success(user.id) else AuthResult.InvalidCredentials
+        if (!PasswordHasher.verify(password, user.passwordSalt, user.passwordHash)) {
+            return AuthResult.InvalidCredentials
+        }
+        // Transparently migrate a legacy (v1/SHA1) hash to the current scheme on successful login.
+        if (PasswordHasher.needsUpgrade(user.passwordHash)) {
+            userDao.update(user.copy(passwordHash = PasswordHasher.hash(password, user.passwordSalt)))
+        }
+        return AuthResult.Success(user.id)
     }
 
     override suspend fun getUser(userId: Long): UserEntity? = userDao.getById(userId)

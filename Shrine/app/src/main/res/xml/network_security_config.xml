@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  plan_9 Phase C: explicitly disallow cleartext (HTTP) traffic app-wide. Product imagery loads
+  over HTTPS via Coil; this makes the no-cleartext stance explicit rather than relying on the
+  platform default.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

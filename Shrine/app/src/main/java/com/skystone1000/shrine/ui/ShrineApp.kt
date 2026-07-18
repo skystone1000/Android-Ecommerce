@@ -13,7 +13,7 @@ import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
@@ -77,7 +77,7 @@ import com.skystone1000.shrine.ui.screens.WishlistScreen
 @Composable
 fun ShrineApp() {
     val appViewModel: AppViewModel = hiltViewModel()
-    val themeMode by appViewModel.themeMode.collectAsState()
+    val themeMode by appViewModel.themeMode.collectAsStateWithLifecycle()
 
     // plan_9 Phase A (F2/F5): keep the system-bar icons legible against the resolved theme.
     // Resolved with the same rule ShrineTheme uses internally; edge-to-edge leaves the bars

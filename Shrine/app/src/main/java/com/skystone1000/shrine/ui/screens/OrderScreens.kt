@@ -32,7 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,7 +110,7 @@ fun OrderPlacedScreen(
     modifier: Modifier = Modifier,
     viewModel: OrderPlacedViewModel = hiltViewModel(),
 ) {
-    val order by viewModel.order.collectAsState()
+    val order by viewModel.order.collectAsStateWithLifecycle()
     OrderPlacedContent(order = order, onContinueShopping = onContinueShopping, onViewOrders = onViewOrders, modifier = modifier)
 }
 
@@ -203,7 +203,7 @@ fun OrderHistoryScreen(
     modifier: Modifier = Modifier,
     viewModel: OrderHistoryViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     OrderHistoryContent(state = state, onOrder = onOrder, onBack = onBack, onBrowse = onBrowse, onSelectTab = viewModel::selectTab, modifier = modifier)
 }
 
@@ -299,7 +299,7 @@ fun OrderDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
-    val order by viewModel.order.collectAsState()
+    val order by viewModel.order.collectAsStateWithLifecycle()
     OrderDetailContent(order = order, onBack = onBack, modifier = modifier)
 }
 

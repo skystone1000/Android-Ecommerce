@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class, FlowPreview::class)
 
 package com.skystone1000.shrine.ui.screens
 
@@ -23,7 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,10 +53,14 @@ import com.skystone1000.shrine.ui.NO_USER
 import com.skystone1000.shrine.ui.scopeId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -100,10 +104,14 @@ class SearchViewModel @Inject constructor(
         wishlistRepository.wishlist(session.scopeId).map { items -> items.map { it.productId }.toSet() }
     }
 
-    val state: StateFlow<SearchUiState> =
-        combine(query, recent, filters, wishlistedIds) { q, recentQueries, f, ids ->
+    // Results are keyed off a *debounced* query so a DB query doesn't run on every keystroke;
+    // distinctUntilChanged collapses repeats (e.g. fast type-then-delete). Filters are not
+    // debounced — changing a filter re-queries immediately. The visible query (below) stays the
+    // live value so the text field never lags.
+    private val results: Flow<List<ProductEntity>> =
+        combine(query.debounce(SEARCH_DEBOUNCE_MS).distinctUntilChanged(), filters) { q, f ->
             val raw = if (q.isBlank()) emptyList() else searchRepository.results(q)
-            val filtered = raw
+            raw
                 .filter { it.priceCents in (f.priceRange.start.toInt() * 100)..(f.priceRange.endInclusive.toInt() * 100) }
                 .filter { it.rating >= f.minRating }
                 .let { products ->
@@ -114,8 +122,16 @@ class SearchViewModel @Inject constructor(
                         SortOption.TopRated -> products.sortedByDescending { it.rating }
                     }
                 }
-            SearchUiState(query = q, recent = recentQueries, results = filtered, filters = f, wishlistedIds = ids)
+        }
+
+    val state: StateFlow<SearchUiState> =
+        combine(query, recent, filters, wishlistedIds, results) { q, recentQueries, f, ids, res ->
+            SearchUiState(query = q, recent = recentQueries, results = res, filters = f, wishlistedIds = ids)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 250L
+    }
 
     fun onQuery(value: String) { query.value = value }
 
@@ -155,7 +171,7 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     SearchContent(
         state = state,
         onQuery = viewModel::onQuery,

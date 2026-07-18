@@ -21,8 +21,10 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // plan_9 Phase C: shrink + obfuscate release builds (R8). Keep rules in proguard-rules.pro.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -79,6 +81,8 @@ dependencies {
     implementation libs.compose.material3
     implementation libs.androidx.activity.compose
     implementation libs.androidx.lifecycle.viewmodel.compose
+    // Lifecycle-aware Flow collection in Compose (collectAsStateWithLifecycle) — plan_9 Phase C
+    implementation libs.androidx.lifecycle.runtime.compose
     debugImplementation libs.compose.ui.tooling
 
     // Kotlinx serialization (type-safe nav routes)

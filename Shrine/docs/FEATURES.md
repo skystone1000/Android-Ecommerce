@@ -34,7 +34,7 @@ All paths are relative to `Shrine/`.
 **End to end:**
 - UI: `LoginScreen`/`LoginContent` in [`AuthScreens.kt`](../app/src/main/java/com/skystone1000/shrine/ui/screens/AuthScreens.kt) — email + password fields, visibility toggle, **Skip** (guest browsing), and a placeholder Forgot password destination.
 - Validation: email non-empty/contains `@`; password ≥ 8 chars.
-- Auth: `AuthRepository.login` looks up the user, recomputes the salted PBKDF2 hash, and compares; on success `LoginViewModel` calls `SessionRepository.signIn(...)`. **Skip** enters the main graph as a guest (`userId = -1`).
+- Auth: `AuthRepository.login` looks up the user and verifies the salted PBKDF2 hash version-aware (constant-time; legacy SHA1 hashes still verify and are upgraded to the current SHA256 scheme on success); on success `LoginViewModel` calls `SessionRepository.signIn(...)`. **Skip** enters the main graph as a guest (`userId = -1`).
 - Navigation: a session/guest sends the user into the main graph; sign-out/sign-in switch graphs via `popUpTo`.
 - **Session persistence:** the session is stored in **DataStore** (`SessionRepository`), so it survives app restarts — on launch the `Splash` gate (`AppViewModel`) reads the persisted session and auto-routes a returning user (or guest) straight to Home, skipping the login screen.
 

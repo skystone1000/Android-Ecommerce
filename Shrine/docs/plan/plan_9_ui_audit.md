@@ -2,7 +2,7 @@
 title: UI Audit & Remediation — insets, spacing, figma parity, hardening
 status: active
 last_updated: 2026-06-29
-# Phases A (insets & system bars) and B (spacing & figma parity) implemented 2026-06-29; Phases C–D outstanding.
+# Phases A (insets & system bars), B (spacing & figma parity) and C (efficiency & hardening) implemented 2026-06-29; Phase D (tests) outstanding.
 scope: Findings from an emulator + code + figma audit of the Compose app (system-bar insets, padding/margins, figma parity) plus answers to the security/efficiency/regression/test questions, and a phased plan to fix them.
 ---
 
@@ -127,6 +127,9 @@ The inset fixes touch global layout, so:
 11. **Coil placeholders** — configure a brand placeholder/error drawable + crossfade. Fixes **F8**.
 
 ### Phase C — Efficiency & hardening (P2)
+
+> **Status: implemented (2026-06-29).** All four items done; `assembleDebug`, the full JVM suite (incl. Roborazzi verify), and `assembleRelease` (R8 + `lintVitalRelease`) are green. (12) Added `androidx.lifecycle:lifecycle-runtime-compose` and switched every `collectAsState()` → `collectAsStateWithLifecycle()` (16 files). (13) Search results now key off a `debounce(250)` + `distinctUntilChanged()` query flow (filters stay immediate; the visible text field still shows the live value). (14) `PasswordHasher` produces v2 `PBKDF2WithHmacSHA256` @ 600k iters with a self-describing version tag and constant-time compare; legacy v1 SHA1/100k hashes still verify and are transparently re-hashed to v2 on the next successful login (`AuthRepository.login`). (15) Release `minifyEnabled true` + `shrinkResources true` with R8 keep rules for the `@Serializable` type-safe nav routes; added `network_security_config.xml` (`cleartextTrafficPermitted=false`) referenced from the manifest. **Caveat:** the release build only *compiles/shrinks* clean here — runtime QA of the shrunk APK on a device is still a pre-release gate. The PasswordHasher migration + search-debounce **tests** are Phase D (item 18).
+
 12. Add `androidx.lifecycle:lifecycle-runtime-compose` and replace `collectAsState()` → `collectAsStateWithLifecycle()` across the 16 screens.
 13. Add `debounce(250)` + `distinctUntilChanged()` to the search query flow.
 14. `PasswordHasher` → `PBKDF2WithHmacSHA256`, raise iterations (~600k), store an algorithm/version tag; keep SHA1 verification path for existing accounts (migration test).
