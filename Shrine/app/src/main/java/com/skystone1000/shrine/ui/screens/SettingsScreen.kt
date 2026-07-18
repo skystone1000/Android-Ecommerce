@@ -86,7 +86,8 @@ private fun SettingsContent(
         topBar = { ShrineTopBar(title = "Settings", onBack = onBack) },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding)
+                .padding(horizontal = ShrineTheme.spacing.screenGutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Appearance", style = MaterialTheme.typography.titleSmall)

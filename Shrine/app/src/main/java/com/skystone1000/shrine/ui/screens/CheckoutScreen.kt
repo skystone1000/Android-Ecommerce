@@ -168,7 +168,8 @@ private fun CheckoutContent(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+                .padding(horizontal = ShrineTheme.spacing.screenGutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             SectionCard(title = "Shipping address", actionLabel = "Change", onAction = onChangeAddress) {

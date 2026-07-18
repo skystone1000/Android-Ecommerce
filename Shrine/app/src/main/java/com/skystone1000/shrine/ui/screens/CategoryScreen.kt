@@ -171,7 +171,7 @@ private fun CategoryContent(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            contentPadding = PaddingValues(start = ShrineTheme.spacing.screenGutter, end = ShrineTheme.spacing.screenGutter, top = 16.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

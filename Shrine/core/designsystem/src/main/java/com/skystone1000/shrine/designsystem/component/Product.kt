@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -151,6 +152,10 @@ fun ShrineBadgedIcon(
 /**
  * Product card: image (provided via [image] slot so the data layer can plug in Coil),
  * wishlist heart, name, price and rating. Optionally flags a [isNew] product.
+ *
+ * Set [reserveQuickAddSpace] when the caller overlays a quick-add button on the card's
+ * bottom-end corner (e.g. the Wishlist grid) so the rating row leaves room for it and the
+ * "+" never overlaps the rating value (plan_9 Phase B / F7).
  */
 @Composable
 fun ProductCard(
@@ -162,6 +167,7 @@ fun ProductCard(
     wishlisted: Boolean = false,
     onWishlistToggle: (Boolean) -> Unit = {},
     isNew: Boolean = false,
+    reserveQuickAddSpace: Boolean = false,
     image: @Composable () -> Unit = { ProductImagePlaceholder() },
 ) {
     Card(
@@ -188,19 +194,36 @@ fun ProductCard(
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             PriceText(price)
-            if (rating != null) RatingBar(rating = rating)
+            // Leave room on the trailing edge for an overlaid quick-add button (F7).
+            if (rating != null) {
+                RatingBar(
+                    rating = rating,
+                    modifier = if (reserveQuickAddSpace) Modifier.padding(end = 44.dp) else Modifier,
+                )
+            }
         }
     }
 }
 
-/** Neutral placeholder used when a product has no image (or before it loads). */
+/**
+ * Branded placeholder used when a product has no image (or before it loads). A faint Shrine
+ * shopping-bag glyph on a tonal field reads as intentional rather than a blank box (F8).
+ */
 @Composable
 fun ProductImagePlaceholder(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceVariant),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.ShoppingBag,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            modifier = Modifier.fillMaxSize(0.32f),
+        )
+    }
 }
 
 /** Category tile: an icon over a label (figma Home category row). */

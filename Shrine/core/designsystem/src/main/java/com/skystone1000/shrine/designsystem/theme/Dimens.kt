@@ -15,10 +15,16 @@ data class ShrineSpacing(
     val xxs: Dp = 4.dp,
     val xs: Dp = 8.dp,
     val sm: Dp = 12.dp,
-    val md: Dp = 16.dp,   // standard screen padding
+    val md: Dp = 16.dp,   // standard card / component padding (figma "padding:16px")
     val lg: Dp = 24.dp,
     val xl: Dp = 32.dp,
     val xxl: Dp = 48.dp,
+    /**
+     * Horizontal page gutter — the left/right edge padding of a screen's content.
+     * Matches the figma dominant screen gutter (`padding:0 24px`). Single source of truth so the
+     * whole app's gutter can be retuned here (plan_9 Phase B / F6). Card-internal padding stays [md].
+     */
+    val screenGutter: Dp = 24.dp,
 )
 
 @Immutable

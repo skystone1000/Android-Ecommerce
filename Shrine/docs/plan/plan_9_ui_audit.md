@@ -2,7 +2,7 @@
 title: UI Audit & Remediation — insets, spacing, figma parity, hardening
 status: active
 last_updated: 2026-06-29
-# Phase A (insets & system bars) implemented 2026-06-29; Phases B–D outstanding.
+# Phases A (insets & system bars) and B (spacing & figma parity) implemented 2026-06-29; Phases C–D outstanding.
 scope: Findings from an emulator + code + figma audit of the Compose app (system-bar insets, padding/margins, figma parity) plus answers to the security/efficiency/regression/test questions, and a phased plan to fix them.
 ---
 
@@ -118,6 +118,9 @@ The inset fixes touch global layout, so:
 7. **Re-verify all 17 screens** on the emulator (gesture + 3-button) for no overlap and no double top gap.
 
 ### Phase B — Spacing & figma parity (P2/P3)
+
+> **Status: implemented (2026-06-29).** All four items done; `assembleDebug` + the full JVM suite (incl. Roborazzi `-Proborazzi.test.verify=true`) stay green. (8) Added `ShrineSpacing.screenGutter = 24.dp` (figma `padding:0 24px`) and applied it to every content screen's horizontal page gutter — grids, lists and scroll columns — leaving card/component-internal `16.dp` padding (`md`) untouched; auth screens were already at 24dp. **One design call:** the gutter defaults to **24dp** per figma; it is a single token, so retuning to 16dp is a one-line change in `Dimens.kt`. (9) **F4 reverted at the user's request (2026-06-29):** the guest Sign in / Create account CTAs stay **inline** at the foot of the scrolling Profile menu (the original layout), not pinned in a `bottomBar`. F4 is therefore **not** addressed and remains open if revisited. (10) `ProductCard` gained `reserveQuickAddSpace`, set by the Wishlist grid, which pads the rating row's trailing edge so the quick-add "+" never overlaps the rating (F7). (11) `ProductImagePlaceholder` is now a faint Shrine shopping-bag glyph on a tonal field instead of a blank box (F8) — note the app never wired Coil for products (all imagery routes through this placeholder), so there was no `ImageLoader`/crossfade to configure. The design-system screenshot baselines were re-recorded and verify-checked.
+
 8. **Introduce a screen-gutter token** in the design system (e.g., `Dimens.screenGutter`) and apply it uniformly. Decide 16dp vs figma's 24dp with the designer; default to **24dp** to match figma unless density feels too loose. Fixes **F6**.
 9. **Guest Profile CTA** — make the "Sign in"/"Create account" actions reachable without hunting: either reduce the menu density, move the CTAs into a non-scrolling bottom region, or show them above the menu for guests. Fixes **F4**.
 10. **Wishlist card** — give the rating row trailing padding so the quick-add "+" never overlaps "4.0". Fixes **F7**.

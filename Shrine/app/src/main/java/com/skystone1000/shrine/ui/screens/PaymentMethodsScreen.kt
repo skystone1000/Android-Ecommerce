@@ -141,7 +141,7 @@ private fun PaymentMethodsContent(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = ShrineTheme.spacing.screenGutter, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(methods, key = { it.id }) { method ->

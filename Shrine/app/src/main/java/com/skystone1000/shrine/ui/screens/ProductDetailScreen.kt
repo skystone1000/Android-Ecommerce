@@ -214,7 +214,7 @@ private fun ProductDetailContent(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             ImagePager(pageCount = product.imageUrls.size.coerceAtLeast(1))
-            Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = ShrineTheme.spacing.screenGutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(product.name, style = MaterialTheme.typography.headlineSmall)
                 PriceText(
                     price = Money.format(product.priceCents),

@@ -185,7 +185,8 @@ private fun SearchContent(
 
     Scaffold(modifier = modifier.fillMaxSize()) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).statusBarsPadding().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).statusBarsPadding()
+                .padding(horizontal = ShrineTheme.spacing.screenGutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

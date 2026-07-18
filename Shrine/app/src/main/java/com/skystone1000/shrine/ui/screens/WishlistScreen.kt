@@ -130,7 +130,7 @@ private fun WishlistContent(
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = ShrineTheme.spacing.screenGutter, vertical = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
@@ -144,6 +144,7 @@ private fun WishlistContent(
                             wishlisted = true,
                             onWishlistToggle = { onRemove(product.id) },
                             isNew = product.isNew,
+                            reserveQuickAddSpace = true,
                         )
                         QuickAddButton(
                             onClick = { onAddToCart(product) },
