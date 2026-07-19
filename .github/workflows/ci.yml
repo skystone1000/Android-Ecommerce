@@ -32,8 +32,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # Robolectric-backed JVM tests: repositories, PasswordHasher, money math, ViewModels (Turbine),
-      # Compose UI tests, Room DB integrity — plus design-system screenshot verification (Roborazzi).
+      # Robolectric-backed JVM tests: repositories, PasswordHasher (incl. SHA1→SHA256 migration),
+      # money math, ViewModels (Turbine, incl. search debounce), Compose UI tests, Room DB integrity
+      # — plus Roborazzi screenshot verification of the design-system gallery AND the per-screen
+      # ScreenScreenshotTest (light + dark).
       - name: Unit tests + screenshot verification
         run: ./gradlew testDebugUnitTest -Proborazzi.test.verify=true
 
@@ -42,6 +44,17 @@ jobs:
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug
+
+      # ---------------------------------------------------------------------------
+      # Instrumented inset/overlap gate (plan_9 Phase D / item 17) — MANUAL / pre-release.
+      # InsetOverlapTest needs a real device or emulator (Robolectric doesn't draw system bars), so
+      # it is NOT run in this JVM job. Run it before a release with an emulator attached:
+      #
+      #     ./gradlew connectedDebugAndroidTest
+      #
+      # To wire it into CI instead, add a separate job on a macOS/KVM runner using
+      # `reactivecircus/android-emulator-runner` across a nav-mode + cutout matrix.
+      # ---------------------------------------------------------------------------
 
       - name: Upload test & lint reports
         if: always()

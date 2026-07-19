@@ -7,6 +7,7 @@ import com.skystone1000.shrine.core.data.CartRepository
 import com.skystone1000.shrine.core.data.CatalogRepository
 import com.skystone1000.shrine.core.data.OrderRepository
 import com.skystone1000.shrine.core.data.PaymentRepository
+import com.skystone1000.shrine.core.data.SearchRepository
 import com.skystone1000.shrine.core.data.SessionRepository
 import com.skystone1000.shrine.core.data.SessionState
 import com.skystone1000.shrine.core.data.SettingsRepository
@@ -19,6 +20,7 @@ import com.skystone1000.shrine.core.model.CategoryEntity
 import com.skystone1000.shrine.core.model.OrderWithLines
 import com.skystone1000.shrine.core.model.PaymentMethodEntity
 import com.skystone1000.shrine.core.model.ProductEntity
+import com.skystone1000.shrine.core.model.RecentSearchEntity
 import com.skystone1000.shrine.core.model.ThemePreference
 import com.skystone1000.shrine.core.model.UserEntity
 import com.skystone1000.shrine.core.model.WishlistItemEntity
@@ -206,6 +208,32 @@ class FakePaymentRepository : PaymentRepository {
     override suspend fun delete(method: PaymentMethodEntity) { items.value = items.value.filterNot { it.id == method.id } }
     override suspend fun setDefault(userId: Long, methodId: Long) {
         items.value = items.value.map { it.copy(isDefault = it.userId == userId && it.id == methodId) }
+    }
+}
+
+/**
+ * In-memory [SearchRepository]. [resultsCallCount] / [queries] record how often (and with what)
+ * the expensive `results(...)` path runs — used to assert the search debounce collapses keystrokes.
+ */
+class FakeSearchRepository(
+    private val products: List<ProductEntity> = emptyList(),
+) : SearchRepository {
+    private val recent = MutableStateFlow<List<RecentSearchEntity>>(emptyList())
+
+    var resultsCallCount = 0
+        private set
+    val queries = mutableListOf<String>()
+
+    override fun recentSearches(userId: Long): Flow<List<RecentSearchEntity>> = recent.asStateFlow()
+    override suspend fun recordSearch(userId: Long, query: String) {}
+    override suspend fun clearRecent(userId: Long) { recent.value = emptyList() }
+    override suspend fun suggestions(query: String, limit: Int): List<ProductEntity> =
+        products.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(limit)
+
+    override suspend fun results(query: String): List<ProductEntity> {
+        resultsCallCount++
+        queries += query
+        return products.filter { it.name.contains(query.trim(), ignoreCase = true) }
     }
 }
 

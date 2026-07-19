@@ -67,8 +67,8 @@ Shrine/
         │       ├── drawable/ + drawable-v24/   # Launcher background/foreground only
         │       ├── mipmap-*/      # Launcher icons
         │       └── values/        # colors.xml, dimens.xml, strings.xml, styles.xml (Theme.Shrine window theme)
-        ├── test/                  # Phase 7 JVM tests: ViewModel (Turbine) + Robolectric Compose UI + testing/{MainDispatcherRule,Fakes}
-        └── androidTest/           # ExampleInstrumentedTest.kt (template only; on-device runs deferred)
+        ├── test/                  # JVM tests: ViewModel (Turbine, incl. search-debounce) + Robolectric Compose UI + per-screen Roborazzi ScreenScreenshotTest (light/dark, baselines in test/screenshots/) + testing/{MainDispatcherRule,Fakes}
+        └── androidTest/           # InsetOverlapTest (edge-to-edge / inset gate — needs an emulator, plan_9 Phase D item 17) + ExampleInstrumentedTest
 ```
 
 > **Phase 5 (2026-06-29) deleted the entire legacy stack** from `:app`: `fragments/`, `adapters/` (linear + staggered RecyclerView), `database/` (the app-local Room DB `contactDB` + DAOs + `ProductSeed`), `models/` (`User`/`CartItem`/`Product` entities), `network/ImageRequester` (Volley), `auth/` (`PasswordHasher` + `Session`), `NavigationHost.kt`, `NavigationIconClickListener.kt`, every `res/layout/*`, `res/menu/`, `res/animator/`, `res/raw/products.json`, and all legacy `shr_*` drawables. The catalog/auth/cart logic and data now live in `:core:data` + `:core:database` + `:core:model`; the only `:app` Kotlin left is `MainActivity`, `ShrineApplication`, and the Compose `ui/` package.
@@ -103,10 +103,14 @@ $ANDROID_HOME/platform-tools/adb shell am start -n \
 # Lint
 ./gradlew lintDebug
 
-# Record/refresh the design-system screenshot baselines after an intentional UI change
-./gradlew :core:designsystem:testDebugUnitTest -Proborazzi.test.record=true
+# Record/refresh ALL screenshot baselines after an intentional UI change
+# (design-system gallery in :core:designsystem + per-screen ScreenScreenshotTest in :app)
+./gradlew testDebugUnitTest -Proborazzi.test.record=true
 # Verify screenshots against the committed baselines (what CI runs)
 ./gradlew testDebugUnitTest -Proborazzi.test.verify=true
+
+# Instrumented edge-to-edge / inset gate — needs a device or emulator (not part of JVM CI)
+./gradlew connectedDebugAndroidTest
 ```
 
 CI (`.github/workflows/ci.yml`) runs `testDebugUnitTest -Proborazzi.test.verify=true`, `lintDebug`, and `assembleDebug` on every push/PR.
