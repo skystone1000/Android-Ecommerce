@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # Manual trigger so CI can be re-run on demand — e.g. to confirm the verify gate is green
+  # after the "Record screenshots" workflow commits fresh ubuntu-latest baselines (a GITHUB_TOKEN
+  # push from that workflow does not itself re-trigger CI).
+  workflow_dispatch:
 
 # The Gradle project lives in the Shrine/ subdirectory of the repo.
 defaults:
