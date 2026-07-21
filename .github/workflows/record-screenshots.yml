@@ -1,0 +1,64 @@
+name: Record screenshots
+
+# Roborazzi NATIVE-graphics baselines are platform-specific: pixels rendered on a developer's
+# macOS machine do not byte-match the ubuntu-latest CI runner, so a macOS-recorded baseline makes
+# the `ci.yml` verify step (./gradlew testDebugUnitTest -Proborazzi.test.verify=true) fail.
+#
+# The CI gate runs on ubuntu-latest, so the committed baselines must be recorded on ubuntu-latest
+# too. This workflow does exactly that: run it manually (Actions tab -> "Record screenshots" -> Run)
+# whenever a screen's layout changes. It records baselines on the runner and commits the updated
+# PNGs back to the branch you launched it from. After it runs, ci.yml's verify step goes green.
+#
+# Note: once baselines are Linux-recorded, local `-Proborazzi.test.record=true` on macOS will produce
+# diffs again — that is expected. CI (Linux) is the source of truth for screenshot baselines.
+
+on:
+  workflow_dispatch:
+
+# The Gradle project lives in the Shrine/ subdirectory of the repo.
+defaults:
+  run:
+    working-directory: Shrine
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    name: Record Roborazzi baselines (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Re-render every Roborazzi baseline (design-system gallery + per-screen ScreenScreenshotTest,
+      # light + dark) on this runner. The record flag MUST carry an explicit `=true`.
+      - name: Record screenshots
+        run: ./gradlew testDebugUnitTest -Proborazzi.test.record=true
+
+      - name: Commit updated baselines
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A Shrine/app/src/test/screenshots Shrine/core/designsystem/src/test/screenshots
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit."
+          else
+            git commit -m "CI: record Roborazzi screenshot baselines on ubuntu-latest"
+            git push
+          fi

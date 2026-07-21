@@ -115,6 +115,8 @@ $ANDROID_HOME/platform-tools/adb shell am start -n \
 
 CI (`.github/workflows/ci.yml`) runs `testDebugUnitTest -Proborazzi.test.verify=true`, `lintDebug`, and `assembleDebug` on every push/PR.
 
+**Screenshot baselines are recorded on the CI OS (ubuntu-latest), not locally.** Roborazzi's NATIVE-graphics rendering is platform-specific, so macOS-recorded PNGs do not byte-match the Ubuntu runner and would fail `verify`. After an intentional UI change, refresh baselines by running the manual **"Record screenshots"** workflow (`.github/workflows/record-screenshots.yml`, Actions tab → Run workflow): it re-records on ubuntu-latest with `-Proborazzi.test.record=true` and commits the updated PNGs back. The local `record` command above still works for previewing diffs, but the Linux baselines are the source of truth.
+
 In Android Studio: open the `Shrine/` folder, set **Gradle JDK** to the bundled JBR (17–21), then Run `app`.
 
 The APK's application id and launch component is `com.skystone1000.shrine`.
